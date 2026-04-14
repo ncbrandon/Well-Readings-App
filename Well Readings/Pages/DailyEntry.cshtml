@@ -1,0 +1,83 @@
+﻿@page
+@model Well_Readings.Pages.DailyEntryModel
+
+<h2>Daily Entry</h2>
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+    <label>Date</label><br />
+    <input type="date" asp-for="Entry.EntryDate" /><br /><br />
+
+    <label>Time</label><br />
+    <input type="time" asp-for="Entry.EntryTime" step="1" /><br /><br />
+
+    <h3>Wells</h3>
+
+    @for (int i = 0; i < Model.Wells.Count; i++)
+    {
+        <fieldset style="margin-bottom:20px; padding:10px; border:1px solid #ccc;">
+            <legend><strong>@Model.Wells[i]</strong></legend>
+
+            <input type="hidden"
+                   name="Entry.WellReadings[@i].WellName"
+                   value="@Model.Wells[i]" />
+
+            <label>Meter Reading</label>
+            <br />
+            <input type="number"
+                   name="Entry.WellReadings[@i].MeterReading" />
+            <br />
+            <br />
+
+            <label>Chlorine</label>
+            <br />
+            <input type="number" step="0.1"
+                   name="Entry.WellReadings[@i].Chlorine" />
+            <br />
+            <br />
+
+            <label>Phosphate</label>
+            <br />
+            <input type="number" step="0.1"
+                   name="Entry.WellReadings[@i].Phosphate" />
+            <br />
+            <br />
+
+            <label>pH</label>
+            <br />
+            <input type="number" step="0.1"
+                   name="Entry.WellReadings[@i].Ph" />
+        </fieldset>
+    }
+
+    <h3>Filtration Plant</h3>
+
+    <label>Filter Plant Meter</label><br />
+    <input type="number"
+           name="Entry.FiltrationPlant.FilterPlantMeterReading" /><br /><br />
+
+    <label>Mt. Jefferson Meter</label><br />
+    <input type="number"
+           name="Entry.FiltrationPlant.MtJeffersonMeterReading" /><br /><br />
+
+    <label>Chlorine</label><br />
+    <input type="number" step="0.1"
+           name="Entry.FiltrationPlant.Chlorine" /><br /><br />
+
+    <label>Phosphate</label><br />
+    <input type="number" step="0.1"
+           name="Entry.FiltrationPlant.Phosphate" /><br /><br />
+
+    <label>pH</label><br />
+    <input type="number" step="0.1"
+           name="Entry.FiltrationPlant.Ph" /><br /><br />
+
+    <label>Temperature</label><br />
+    <input type="number" step="0.1"
+           name="Entry.FiltrationPlant.Temperature" /><br /><br />
+
+    <button type="submit" style="font-size:1.2em; padding:10px;">
+        Submit
+    </button>
+</form>
