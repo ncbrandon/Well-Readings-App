@@ -1,0 +1,6 @@
+@Well_Readings_HostAddress = http://localhost:5168
+
+GET {{Well_Readings_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
