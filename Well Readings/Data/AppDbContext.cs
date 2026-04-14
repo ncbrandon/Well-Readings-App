@@ -22,16 +22,16 @@ namespace Well_Readings.Data
             modelBuilder.Entity<WellReading>(entity =>
             {
                 entity.Property(e => e.MeterReading)
-                      .HasPrecision(9, 0);
+                      .HasPrecision(18, 0);
 
                 entity.Property(e => e.Chlorine)
-                      .HasPrecision(1, 1);
+                      .HasPrecision(3, 1);
 
                 entity.Property(e => e.Phosphate)
-                      .HasPrecision(1, 1);
+                      .HasPrecision(3, 1);
 
                 entity.Property(e => e.Ph)
-                      .HasPrecision(2, 1);
+                      .HasPrecision(3, 1);
             });
 
             // ---- Filtration plant ----
@@ -44,16 +44,16 @@ namespace Well_Readings.Data
                       .HasPrecision(18, 0);
 
                 entity.Property(e => e.Chlorine)
-                      .HasPrecision(4, 1);
+                      .HasPrecision(3, 1);
 
                 entity.Property(e => e.Phosphate)
-                      .HasPrecision(4, 1);
+                      .HasPrecision(3, 1);
 
                 entity.Property(e => e.Ph)
                       .HasPrecision(3, 1);
 
                 entity.Property(e => e.Temperature)
-                      .HasPrecision(4, 1);
+                      .HasPrecision(3, 1);
             });
         }
     }
