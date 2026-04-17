@@ -1,0 +1,54 @@
+﻿@page
+@model Well_Readings.Pages.RangeSummaryModel
+
+<h2>Date Range Summary</h2>
+
+<form method="get">
+    <label>Start Date</label>
+    <input type="date" asp-for="Start" />
+
+    <label>End Date</label>
+    <input type="date" asp-for="End" />
+
+    <button type="submit">Run Summary</button>
+</form>
+
+@if (Model.Rows.Any())
+{
+    <div style="margin:15px 0; font-weight:bold; font-size:1.1em;">
+        Total Gallons (All Sites):
+        <span style="margin-left:10px;">
+            Total Gallons (All Sites):
+            <strong>@Model.TotalGallonsAllSites.ToString("N0")</strong>
+
+        </span>
+    </div>
+}
+
+
+@if (Model.Rows.Any())
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Site</th>
+                <th>Total Gallons</th>
+                <th>Max Daily Gallons</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr>
+                    <td>@row.Site</td>
+                    <td>@row.TotalGallons.ToString("N0")</td>
+                    <td>@row.MaxDailyGallons.ToString("N0")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No data found for the selected date range.</p>
+}

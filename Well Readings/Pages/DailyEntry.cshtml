@@ -1,10 +1,55 @@
 ﻿@page
 @model Well_Readings.Pages.DailyEntryModel
 
+<style>
+    .tabs {
+        display: flex;
+        margin-bottom: 10px;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background: #eee;
+        cursor: pointer;
+        font-size: 1em;
+    }
+
+        .tab-button.active {
+            background: #fff;
+            border-bottom: none;
+            font-weight: bold;
+        }
+
+    .tab-content {
+        display: none;
+        border: 1px solid #ccc;
+        padding: 10px;
+    }
+
+        .tab-content.active {
+            display: block;
+        }
+</style>
+
 <h2>Daily Entry</h2>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div style="color:red; font-weight:bold;">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div>@error.ErrorMessage</div>
+        }
+    </div>
+}
+
 
 <form method="post">
     @Html.AntiForgeryToken()
+
+    <input type="hidden" asp-for="Entry.Id" />
 
     <label>Date</label><br />
     <input type="date" asp-for="Entry.EntryDate" /><br /><br />
@@ -12,72 +57,123 @@
     <label>Time</label><br />
     <input type="time" asp-for="Entry.EntryTime" step="1" /><br /><br />
 
-    <h3>Wells</h3>
+    <div class="tabs">
+        <button type="button" class="tab-button active"
+                onclick="showTab('wells', this)">
+            Wells
+        </button>
+        <button type="button" class="tab-button"
+                onclick="showTab('filtration', this)">
+            Filtration
+        </button>
+        <button type="button" class="tab-button"
+                onclick="showTab('pumps', this)">
+            Pumps
+        </button>
+    </div>
 
-    @for (int i = 0; i < Model.Wells.Count; i++)
-    {
-        <fieldset style="margin-bottom:20px; padding:10px; border:1px solid #ccc;">
-            <legend><strong>@Model.Wells[i]</strong></legend>
+    <div id="wells" class="tab-content active">
+        <h3>Wells</h3>
 
-            <input type="hidden"
-                   name="Entry.WellReadings[@i].WellName"
-                   value="@Model.Wells[i]" />
+        @for (int i = 0; i < Model.Wells.Count; i++)
+        {
+            <fieldset style="margin-bottom:20px; padding:10px; border:1px solid #ccc;">
+                <legend><strong>@Model.Wells[i]</strong></legend>
 
-            <label>Meter Reading</label>
-            <br />
-            <input type="number"
-                   name="Entry.WellReadings[@i].MeterReading" />
-            <br />
-            <br />
+                <input type="hidden"
+                       name="Entry.WellReadings[@i].WellName"
+                       value="@Model.Wells[i]" />
 
-            <label>Chlorine</label>
-            <br />
-            <input type="number" step="0.1"
-                   name="Entry.WellReadings[@i].Chlorine" />
-            <br />
-            <br />
+                <label>Meter Reading</label>
+                <br />
+                <input type="number"
+                       name="Entry.WellReadings[@i].MeterReading"
+                       value="@Model.Entry.WellReadings[@i].MeterReading" />
 
-            <label>Phosphate</label>
-            <br />
-            <input type="number" step="0.1"
-                   name="Entry.WellReadings[@i].Phosphate" />
-            <br />
-            <br />
+                <br />
+                <br />
 
-            <label>pH</label>
-            <br />
-            <input type="number" step="0.1"
-                   name="Entry.WellReadings[@i].Ph" />
-        </fieldset>
-    }
+                <label>Chlorine</label>
+                <br />
+                <input type="number" step="0.1"
+                       name="Entry.WellReadings[@i].Chlorine"
+                       value="@Model.Entry.WellReadings[@i].Chlorine" />
+                <br />
+                <br />
 
-    <h3>Filtration Plant</h3>
+                <label>Phosphate</label>
+                <br />
+                <input type="number" step="0.1"
+                       name="Entry.WellReadings[@i].Phosphate"
+                       value="@Model.Entry.WellReadings[@i].Phosphate" />
+                <br />
+                <br />
 
-    <label>Filter Plant Meter</label><br />
-    <input type="number"
-           name="Entry.FiltrationPlant.FilterPlantMeterReading" /><br /><br />
+                <label>pH</label>
+                <br />
+                <input type="number" step="0.1"
+                       name="Entry.WellReadings[@i].Ph"
+                       value="@Model.Entry.WellReadings[@i].Ph" />
+            </fieldset>
+        }
+    </div>
 
-    <label>Mt. Jefferson Meter</label><br />
-    <input type="number"
-           name="Entry.FiltrationPlant.MtJeffersonMeterReading" /><br /><br />
+    <div id="filtration" class="tab-content">
+        <h3>Filtration Plant</h3>
 
-    <label>Chlorine</label><br />
-    <input type="number" step="0.1"
-           name="Entry.FiltrationPlant.Chlorine" /><br /><br />
+        <label>Filter Plant Meter</label><br />
+        <input type="number"
+               name="Entry.FiltrationPlant.FilterPlantMeterReading"
+               value="@Model.Entry.FiltrationPlant?.FilterPlantMeterReading" /><br /><br />
 
-    <label>Phosphate</label><br />
-    <input type="number" step="0.1"
-           name="Entry.FiltrationPlant.Phosphate" /><br /><br />
+        <label>Mt. Jefferson Meter</label><br />
+        <input type="number"
+               name="Entry.FiltrationPlant.MtJeffersonMeterReading"
+               value="@Model.Entry.FiltrationPlant?.MtJeffersonMeterReading" /><br /><br />
 
-    <label>pH</label><br />
-    <input type="number" step="0.1"
-           name="Entry.FiltrationPlant.Ph" /><br /><br />
+        <label>Chlorine</label><br />
+        <input type="number" step="0.1"
+               name="Entry.FiltrationPlant.Chlorine"
+               value="@Model.Entry.FiltrationPlant?.Chlorine" /><br /><br />
 
-    <label>Temperature</label><br />
-    <input type="number" step="0.1"
-           name="Entry.FiltrationPlant.Temperature" /><br /><br />
+        <label>Phosphate</label><br />
+        <input type="number" step="0.1"
+               name="Entry.FiltrationPlant.Phosphate"
+               value="@Model.Entry.FiltrationPlant?.Phosphate" /><br /><br />
 
-    <button type="submit" style="font-size:1.2em; padding:10px;">
-        Submit
-    </button>
+        <label>pH</label><br />
+        <input type="number" step="0.1"
+               name="Entry.FiltrationPlant.Ph"
+               value="@Model.Entry.FiltrationPlant?.Ph" /><br /><br />
+
+        <label>Temperature</label><br />
+        <input type="number" step="0.1"
+               name="Entry.FiltrationPlant.Temperature"
+               value="@Model.Entry.FiltrationPlant?.Temperature" />
+    </div>
+
+    <div id="pumps" class="tab-content">
+        <h3>Pump Stations</h3>
+        <p>Pump station entry coming next.</p>
+    </div>
+
+    <div style="position: sticky; bottom: 0; background: #fff; padding: 10px; border-top: 1px solid #ccc;">
+        <button type="submit"
+                style="width:100%; font-size:1.3em; padding:12px;">
+            Submit Daily Entry
+        </button>
+    </div>
 </form>
+
+<script>
+    function showTab(tabId, button) {
+        document.querySelectorAll('.tab-content')
+            .forEach(t => t.classList.remove('active'));
+
+        document.querySelectorAll('.tab-button')
+            .forEach(b => b.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        button.classList.add('active');
+    }
+</script>

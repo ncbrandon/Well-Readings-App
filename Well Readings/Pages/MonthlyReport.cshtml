@@ -1,0 +1,61 @@
+﻿@page
+@model Well_Readings.Pages.MonthlyReportModel
+
+<h2>Monthly Well Report</h2>
+
+<form method="get" style="margin-bottom:20px;">
+    <label>Year</label>
+    <input type="number" asp-for="Year" min="2000" max="2100" />
+
+    <label>Month</label>
+    <input type="number" asp-for="Month" min="1" max="12" />
+
+    <label>Site</label>
+    <select asp-for="Site">
+        <option value="">All Sites</option>
+        <option value="Reeves Well">Reeves Well</option>
+        <option value="Park Well">Park Well</option>
+        <option value="Woods Well">Woods Well</option>
+        <option value="Catawissa Well">Catawissa Well</option>
+        <option value="New Well">New Well</option>
+        <option value="Oakwood Well">Oakwood Well</option>
+        <option value="Ray Well">Ray Well</option>
+    </select>
+
+    <button type="submit">Run Report</button>
+</form>
+
+@if (!Model.Rows.Any())
+{
+    <p>No data found for this month.</p>
+}
+else
+{
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:2px solid #ccc;">
+                <th>Site</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Gallons</th>
+                <th>Chlorine</th>
+                <th>Phosphate</th>
+                <th>pH</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr style="border-bottom:1px solid #ddd;">
+                    <td>@row.Site</td>
+                    <td>@row.Date</td>
+                    <td>@row.Time</td>
+                    <td>@row.GallonsPumped</td>
+                    <td>@row.Chlorine</td>
+                    <td>@row.Phosphate</td>
+                    <td>@row.Ph</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

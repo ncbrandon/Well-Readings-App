@@ -4,8 +4,9 @@
     {
         public DateOnly EntryDate { get; set; }
         public TimeOnly EntryTime { get; set; }
+        public Guid? Id { get; set; }
 
         public List<WellReadingDto> WellReadings { get; set; } = new();
-        public FiltrationPlantReadingDto FiltrationPlant { get; set; }
+        public FiltrationPlantReadingDto? FiltrationPlant { get; set; }
     }
 }

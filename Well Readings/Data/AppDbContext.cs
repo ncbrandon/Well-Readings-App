@@ -13,6 +13,7 @@ namespace Well_Readings.Data
         public DbSet<DailyEntry> DailyEntries { get; set; }
         public DbSet<WellReading> WellReadings { get; set; }
         public DbSet<FiltrationPlantReading> FiltrationPlantReadings { get; set; }
+        public DbSet<Well> Wells { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

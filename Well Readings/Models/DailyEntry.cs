@@ -16,6 +16,6 @@ namespace Well_Readings.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<WellReading> WellReadings { get; set; } = new List<WellReading>();
-        public FiltrationPlantReading FiltrationPlantReading { get; set; }
+        public FiltrationPlantReading? FiltrationPlantReading { get; set; }
     }
 }

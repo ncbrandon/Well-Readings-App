@@ -1,0 +1,62 @@
+﻿@page
+@model Well_Readings.Pages.DailyLogModel
+
+<h2>Daily Log</h2>
+
+@if (Model.Entries == null || !Model.Entries.Any())
+{
+    <p>No daily entries found.</p>
+}
+else
+{
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:2px solid #ccc;">
+                <th style="text-align:left; padding:6px;">Date</th>
+                <th style="text-align:left; padding:6px;">Time</th>
+                <th style="text-align:left; padding:6px;">Summary</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var entry in Model.Entries)
+            {
+                <tr style="border-bottom:1px solid #ddd;">
+                    <!-- Date (clickable) -->
+                    <td style="padding:6px;">
+                        <a href="/DailyEntry?id=@entry.Id">
+                            @entry.EntryDate.ToString("yyyy-MM-dd")
+                        </a>
+                    </td>
+
+                    <!-- Time (clickable) -->
+                    <td style="padding:6px;">
+                        <a href="/DailyEntry?id=@entry.Id">
+                            @entry.EntryTime.ToString("HH:mm")
+                        </a>
+                    </td>
+
+                    <!-- Summary -->
+                    <td style="padding:6px;">
+                        @entry.WellCount wells
+                    </td>
+
+                    <!-- Delete button -->
+                    <td style="padding:6px;">
+                        <form method="post"
+                              asp-page-handler="Delete"
+                              asp-route-id="@entry.Id"
+                              onsubmit="return confirm('Delete this daily entry?');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    style="color:red; background:none; border:none; cursor:pointer;">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+
+    </table>
+}

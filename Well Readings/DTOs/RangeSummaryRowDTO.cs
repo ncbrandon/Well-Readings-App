@@ -1,0 +1,9 @@
+﻿namespace Well_Readings.DTOs
+{
+    public class RangeSummaryRowDto
+    {
+        public string Site { get; set; } = "";
+        public decimal TotalGallons { get; set; }
+        public decimal MaxDailyGallons { get; set; }
+    }
+}
