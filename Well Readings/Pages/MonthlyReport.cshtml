@@ -11,15 +11,18 @@
     <input type="number" asp-for="Month" min="1" max="12" />
 
     <label>Site</label>
-    <select asp-for="Site">
-        <option value="">All Sites</option>
-        <option value="Reeves Well">Reeves Well</option>
-        <option value="Park Well">Park Well</option>
-        <option value="Woods Well">Woods Well</option>
-        <option value="Catawissa Well">Catawissa Well</option>
-        <option value="New Well">New Well</option>
-        <option value="Oakwood Well">Oakwood Well</option>
-        <option value="Ray Well">Ray Well</option>
+    <select name="Site" id="Site">
+        @foreach (var site in Model.AvailableSites.Concat(new[] { "Filtration Plant" }))
+        {
+            if (site == Model.Site)
+            {
+                <option value="@site" selected>@site</option>
+            }
+            else
+            {
+                <option value="@site">@site</option>
+            }
+        }
     </select>
 
     <button type="submit">Run Report</button>
@@ -35,8 +38,29 @@ else
         <thead>
             <tr style="border-bottom:2px solid #ccc;">
                 <th>Site</th>
+                <th>Gallons</th>
+                <th>Max Daily Gallons</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var site in Model.TotalGallonsPerSite.Keys.OrderBy(s => s))
+            {
+                <tr style="border-bottom:1px solid #ddd;">
+                    <td>@site</td>
+                    <td>@Model.TotalGallonsPerSite[site].ToString("N0")</td>
+                    <td>@(Model.MaxDailyGallonsPerSite.TryGetValue(site, out var v) ? v.ToString("N0") : "0")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h3 style="margin-top:32px;">Entries for @(!string.IsNullOrEmpty(Model.Site) ? Model.Site : "All Sites")</h3>
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:2px solid #ccc;">
                 <th>Date</th>
                 <th>Time</th>
+                <th>Well</th>
                 <th>Gallons</th>
                 <th>Chlorine</th>
                 <th>Phosphate</th>
@@ -44,18 +68,105 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var row in Model.Rows)
+            @foreach (var row in Model.Rows
+                .Where(r => string.IsNullOrEmpty(Model.Site) || r.WellName.Contains(Model.Site))
+                .OrderBy(r => r.Date).ThenBy(r => r.EntryTime))
             {
-                <tr style="border-bottom:1px solid #ddd;">
-                    <td>@row.Site</td>
-                    <td>@row.Date</td>
-                    <td>@row.Time</td>
-                    <td>@row.GallonsPumped</td>
-                    <td>@row.Chlorine</td>
-                    <td>@row.Phosphate</td>
-                    <td>@row.Ph</td>
+                <tr style="border-bottom:1px solid #eee;">
+                    <td>@row.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@row.EntryTime.ToString("HH:mm")</td>
+                    <td>@row.WellName</td>
+                    <td>@row.MeterReading.ToString("N0")</td>
+                    <td>@(row.Chlorine.HasValue ? row.Chlorine.Value.ToString("0.##") : "-")</td>
+                    <td>@(row.Phosphate.HasValue ? row.Phosphate.Value.ToString("0.##") : "-")</td>
+                    <td>@(row.Ph.HasValue ? row.Ph.Value.ToString("0.##") : "-")</td>
                 </tr>
             }
         </tbody>
     </table>
+
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:2px solid #ccc;">
+                <th>Date</th>
+                <th>Site</th>
+                <th>Gallons</th>
+                <th>Chlorine</th>
+                <th>Phosphate</th>
+                <th>pH</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                var filteredRows = Model.Rows
+                    .Where(r => string.IsNullOrEmpty(Model.Site) || Model.GetSiteFromWell(r.WellName) == Model.Site)
+                    .GroupBy(r => new { r.Date, Site = Model.GetSiteFromWell(r.WellName) })
+                    .OrderBy(g => g.Key.Date)
+                    .ThenBy(g => g.Key.Site)
+                    .Select(g => new {
+                        Date = g.Key.Date,
+                        Site = g.Key.Site,
+                        Gallons = g.Sum(x => x.MeterReading), // This is cumulative, see note below
+                        Chlorine = g.Average(x => x.Chlorine ?? 0),
+                        Phosphate = g.Average(x => x.Phosphate ?? 0),
+                        Ph = g.Average(x => x.Ph ?? 0)
+                    });
+            }
+            @foreach (var row in filteredRows)
+            {
+                <tr style="border-bottom:1px solid #eee;">
+                    <td>@row.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@row.Site</td>
+                    <td>@row.Gallons.ToString("N0")</td>
+                    <td>@(row.Chlorine > 0 ? row.Chlorine.ToString("0.##") : "-")</td>
+                    <td>@(row.Phosphate > 0 ? row.Phosphate.ToString("0.##") : "-")</td>
+                    <td>@(row.Ph > 0 ? row.Ph.ToString("0.##") : "-")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (Model.Site == "Filtration Plant")
+    {
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Gallons Pumped</th>
+                    <th>Chlorine</th>
+                    <th>Phosphate</th>
+                    <th>pH</th>
+                    <th>Temperature</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    // Assume Model.Rows is sorted by Date ascending
+                    var rows = Model.Rows.OrderBy(r => r.Date).ThenBy(r => r.EntryTime).ToList();
+                    for (int i = 0; i < rows.Count - 1; i++)
+                    {
+                        var today = rows[i];
+                        var tomorrow = rows[i + 1];
+                        var gallonsPumped = tomorrow.MeterReading - today.MeterReading;
+                }
+                }
+                @for (int i = 0; i < rows.Count - 1; i++)
+                {
+                    var today = rows[i];
+                    var tomorrow = rows[i + 1];
+                    var gallonsPumped = tomorrow.MeterReading - today.MeterReading;
+                    <tr>
+                        <td>@today.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@today.EntryTime.ToString("HH:mm")</td>
+                        <td>@gallonsPumped.ToString("N0")</td>
+                        <td>@(today.Chlorine.HasValue ? today.Chlorine.Value.ToString("0.##") : "-")</td>
+                        <td>@(today.Phosphate.HasValue ? today.Phosphate.Value.ToString("0.##") : "-")</td>
+                        <td>@(today.Ph.HasValue ? today.Ph.Value.ToString("0.##") : "-")</td>
+                        <td>@(today.Temperature.HasValue ? today.Temperature.Value.ToString("0.##") : "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }

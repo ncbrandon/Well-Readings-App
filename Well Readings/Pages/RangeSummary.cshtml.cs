@@ -19,7 +19,6 @@ namespace Well_Readings.Pages
 
         public async Task OnGetAsync()
         {
-            // ? Default dates if not provided
             if (Start == default)
                 Start = DateOnly.FromDateTime(DateTime.Today.AddDays(-7));
 
@@ -29,10 +28,14 @@ namespace Well_Readings.Pages
             using var client = new HttpClient();
 
             var response = await client.GetAsync(
-                $"https://localhost:7090/api/daily-entries/reports/range-summary?start={Start}&end={End}");
+                $"https://localhost:7090/api/daily-entries/reports/range-summary" +
+                $"?start={Start:yyyy-MM-dd}&end={End:yyyy-MM-dd}");
 
             if (!response.IsSuccessStatusCode)
-                return;
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"API Error: {response.StatusCode} - {error}");
+            }
 
             var json = await response.Content.ReadAsStringAsync();
 
@@ -43,6 +46,5 @@ namespace Well_Readings.Pages
 
             TotalGallonsAllSites = Rows.Sum(r => r.TotalGallons);
         }
-
     }
 }

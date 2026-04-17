@@ -121,35 +121,44 @@
     <div id="filtration" class="tab-content">
         <h3>Filtration Plant</h3>
 
-        <label>Filter Plant Meter</label><br />
-        <input type="number"
-               name="Entry.FiltrationPlant.FilterPlantMeterReading"
-               value="@Model.Entry.FiltrationPlant?.FilterPlantMeterReading" /><br /><br />
+        <label>Which unit is running?</label>
+        <select asp-for="Entry.FiltrationPlant.UnitSelection">
+            <option value="">-- Select --</option>
+            <option value="Unit1">Unit 1</option>
+            <option value="Unit2">Unit 2</option>
+            <option value="Both">Both</option>
+        </select>
+        <br /><br />
 
-        <label>Mt. Jefferson Meter</label><br />
-        <input type="number"
-               name="Entry.FiltrationPlant.MtJeffersonMeterReading"
-               value="@Model.Entry.FiltrationPlant?.MtJeffersonMeterReading" /><br /><br />
+        @for (int i = 1; i <= 2; i++)
+        {
+            <fieldset style="margin-bottom:20px; padding:10px; border:1px solid #ccc;">
+                <legend><strong>Unit @i</strong></legend>
+                <label>Feed Pressure</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FeedPressure" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FeedPressure" /><br /><br />
 
-        <label>Chlorine</label><br />
-        <input type="number" step="0.1"
-               name="Entry.FiltrationPlant.Chlorine"
-               value="@Model.Entry.FiltrationPlant?.Chlorine" /><br /><br />
+                <label>Feed Flow</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FeedFlow" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FeedFlow" /><br /><br />
 
-        <label>Phosphate</label><br />
-        <input type="number" step="0.1"
-               name="Entry.FiltrationPlant.Phosphate"
-               value="@Model.Entry.FiltrationPlant?.Phosphate" /><br /><br />
+                <label>Filtrate Pressure</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FiltratePressure" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FiltratePressure" /><br /><br />
 
-        <label>pH</label><br />
-        <input type="number" step="0.1"
-               name="Entry.FiltrationPlant.Ph"
-               value="@Model.Entry.FiltrationPlant?.Ph" /><br /><br />
+                <label>Filtrate Flow</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FiltrateFlow" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FiltrateFlow" /><br /><br />
 
-        <label>Temperature</label><br />
-        <input type="number" step="0.1"
-               name="Entry.FiltrationPlant.Temperature"
-               value="@Model.Entry.FiltrationPlant?.Temperature" />
+                <label>TMP</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].TMP" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.TMP" /><br /><br />
+
+                <label>Total Filter Run Time</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].TotalFilterRunTime" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.TotalFilterRunTime" /><br /><br />
+
+                <label>Total Filtration Flow Yesterday</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].TotalFiltrationFlowYesterday" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.TotalFiltrationFlowYesterday" /><br /><br />
+
+                <label>Pressure Decay</label><br />
+                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].PressureDecay" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.PressureDecay" /><br /><br />
+            </fieldset>
+        }
     </div>
 
     <div id="pumps" class="tab-content">
