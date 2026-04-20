@@ -1,0 +1,29 @@
+﻿@page
+@model Well_Readings.Pages.DashboardModel
+
+<h2>Dashboard</h2>
+
+<form method="get">
+    <input type="date" asp-for="Start" />
+    <input type="date" asp-for="End" />
+    <button type="submit">Load</button>
+</form>
+
+@if (Model.Wells.Any())
+{
+    foreach (var well in Model.Wells)
+    {
+        <h3>@well.Well</h3>
+        <p>Total: @well.Total.ToString("N0") gallons</p>
+        <p>Max Daily: @well.Max.ToString("N0")</p>
+
+        <ul>
+            @foreach (var d in well.Data)
+            {
+                <li style="color:@(d.IsAnomaly ? "red" : "black")">
+                    @d.Date → @d.Gallons
+                </li>
+            }
+        </ul>
+    }
+}

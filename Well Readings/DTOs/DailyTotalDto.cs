@@ -5,6 +5,8 @@
         public DateOnly Date { get; set; }
         public decimal Gallons { get; set; }
         public decimal CumulativeGallons { get; set; }
+        public bool IsAnomaly { get; set; }
+
     }
 }
 

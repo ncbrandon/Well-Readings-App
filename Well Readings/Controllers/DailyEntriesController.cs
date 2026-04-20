@@ -13,7 +13,7 @@ namespace Well_Readings.Controllers
         private readonly AppDbContext _db;
 
         public DailyEntriesController(AppDbContext db)
-        {
+        { 
             _db = db;
         }
 
@@ -32,7 +32,6 @@ namespace Well_Readings.Controllers
 
             DailyEntry dailyEntry;
 
-            // ================= UPDATE =================
             if (request.Id.HasValue && request.Id != Guid.Empty)
             {
                 dailyEntry = await _db.DailyEntries
@@ -50,7 +49,6 @@ namespace Well_Readings.Controllers
             }
             else
             {
-                // ================= CREATE =================
                 if (await _db.DailyEntries.AnyAsync(d => d.EntryDate == request.EntryDate))
                     return BadRequest("An entry already exists for this date.");
 
@@ -86,98 +84,12 @@ namespace Well_Readings.Controllers
         }
 
         // =====================================================
-        // LIST (Daily Log)
-        // =====================================================
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var entries = await _db.DailyEntries
-                .AsNoTracking()
-                .OrderByDescending(d => d.EntryDate)
-                .ThenByDescending(d => d.EntryTime)
-                .Select(d => new
-                {
-                    d.Id,
-                    d.EntryDate,
-                    d.EntryTime,
-                    WellCount = d.WellReadings.Count
-                })
-                .ToListAsync();
-
-            return Ok(entries);
-        }
-
-        // =====================================================
-        // TODAY
-        // =====================================================
-        [HttpGet("today")]
-        public async Task<IActionResult> GetToday()
-        {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-
-            var entry = await _db.DailyEntries
-                .AsNoTracking()
-                .Where(d => d.EntryDate == today)
-                .Select(d => new DailyEntryRequestDto
-                {
-                    Id = d.Id,
-                    EntryDate = d.EntryDate,
-                    EntryTime = d.EntryTime,
-                    WellReadings = d.WellReadings.Select(w => new WellReadingDto
-                    {
-                        WellName = w.Well.Name,
-                        MeterReading = w.MeterReading,
-                        Chlorine = w.Chlorine,
-                        Phosphate = w.Phosphate,
-                        Ph = w.Ph
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync();
-
-            if (entry == null)
-                return NotFound();
-
-            return Ok(entry);
-        }
-
-        // =====================================================
-        // GET BY ID
-        // =====================================================
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            var entry = await _db.DailyEntries
-                .AsNoTracking()
-                .Where(d => d.Id == id)
-                .Select(d => new DailyEntryRequestDto
-                {
-                    Id = d.Id,
-                    EntryDate = d.EntryDate,
-                    EntryTime = d.EntryTime,
-                    WellReadings = d.WellReadings.Select(w => new WellReadingDto
-                    {
-                        WellName = w.Well.Name,
-                        MeterReading = w.MeterReading,
-                        Chlorine = w.Chlorine,
-                        Phosphate = w.Phosphate,
-                        Ph = w.Ph
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync();
-
-            if (entry == null)
-                return NotFound();
-
-            return Ok(entry);
-        }
-
-        // =====================================================
-        // RANGE SUMMARY (FIXED + ACCURATE DAILY USAGE)
+        // RANGE SUMMARY (FIXED + LEAK DETECTION)
         // =====================================================
         [HttpGet("reports/range-summary")]
         public async Task<IActionResult> GetRangeSummary(
-            [FromQuery] DateOnly start,
-            [FromQuery] DateOnly end)
+    [FromQuery] DateOnly start,
+    [FromQuery] DateOnly end)
         {
             if (start == default || end == default)
                 return BadRequest("Start and End dates are required.");
@@ -189,7 +101,7 @@ namespace Well_Readings.Controllers
                 .AsNoTracking()
                 .Include(w => w.DailyEntry)
                 .Include(w => w.Well)
-                .Where(w => w.DailyEntry.EntryDate >= start &&
+                .Where(w => w.DailyEntry.EntryDate >= start.AddDays(-1) &&
                             w.DailyEntry.EntryDate <= end)
                 .Select(w => new
                 {
@@ -200,40 +112,87 @@ namespace Well_Readings.Controllers
                 .ToListAsync();
 
             var grouped = data
+                // ✅ STEP 1: group by WELL
                 .GroupBy(x => x.WellName)
                 .Select(g =>
                 {
-                    var ordered = g
+                    // ✅ STEP 2: group by DATE (take MAX reading per day)
+                    var dailyMax = g
+                        .GroupBy(x => x.Date)
+                        .Select(d => new
+                        {
+                            Date = d.Key,
+                            MeterReading = d.Max(x => x.MeterReading)
+                        })
                         .OrderBy(x => x.Date)
                         .ToList();
 
                     var daily = new List<DailyTotalDto>();
-                    decimal cumulative = 0;
 
-                    for (int i = 0; i < ordered.Count; i++)
+                    // ✅ STEP 3: calculate DAILY USAGE (difference)
+                    for (int i = 0; i < dailyMax.Count; i++)
                     {
-                        var current = ordered[i];
-                        var previous = i > 0 ? ordered[i - 1].MeterReading : 0;
+                        if (i == 0)
+                        {
+                            daily.Add(new DailyTotalDto
+                            {
+                                Date = dailyMax[i].Date,
+                                Gallons = 0,
+                                IsAnomaly = false
+                            });
+                            continue;
+                        }
 
-                        var gallons = current.MeterReading - previous;
+                        var prev = dailyMax[i - 1].MeterReading;
+                        var current = dailyMax[i].MeterReading;
 
+                        var gallons = current - prev;
+
+                        // handle bad data / resets
                         if (gallons < 0)
                             gallons = 0;
 
-                        cumulative += gallons;
-
                         daily.Add(new DailyTotalDto
                         {
-                            Date = current.Date,
-                            Gallons = gallons,
-                            CumulativeGallons = cumulative
+                            Date = dailyMax[i].Date,
+                            Gallons = gallons
                         });
+                    }
+
+                    // ✅ THIS IS THE CORRECT SPOT
+                    daily = daily.Skip(1).ToList();
+
+                    // ✅ STEP 4: anomaly detection (rolling avg)
+                    for (int i = 0; i < daily.Count; i++)
+                    {
+                        var window = daily
+                            .Skip(Math.Max(0, i - 3))
+                            .Take(3)
+                            .Where(d => d.Gallons > 0)
+                            .ToList();
+
+                        var avg = window.Any() ? window.Average(d => d.Gallons) : 0;
+
+                        if (avg > 0 && daily[i].Gallons > avg * 1.5m)
+                        {
+                            daily[i].IsAnomaly = true;
+                        }
+                    }
+
+                    // ✅ STEP 5: cumulative total
+                    decimal cumulative = 0;
+
+                    foreach (var d in daily)
+                    {
+                        cumulative += d.Gallons;
+                        d.CumulativeGallons = cumulative;
                     }
 
                     return new RangeSummaryRowDto
                     {
                         WellName = g.Key,
                         TotalGallons = daily.Sum(d => d.Gallons),
+                        MaxDailyGallons = daily.Any() ? daily.Max(d => d.Gallons) : 0,
                         DailyTotals = daily
                     };
                 })
@@ -243,8 +202,9 @@ namespace Well_Readings.Controllers
             return Ok(grouped);
         }
 
+
         // =====================================================
-        // MONTHLY REPORT (FIXED NAMING)
+        // MONTHLY REPORT
         // =====================================================
         [HttpGet("reports/monthly")]
         public async Task<IActionResult> GetMonthlyReport(
@@ -288,6 +248,113 @@ namespace Well_Readings.Controllers
             return Ok(rows);
         }
 
+        [HttpGet("reports/dashboard")]
+        public async Task<IActionResult> GetDashboard(
+    [FromQuery] DateOnly start,
+    [FromQuery] DateOnly end)
+        {
+            if (start == default || end == default)
+                return BadRequest("Start and End dates required.");
+
+            var data = await _db.WellReadings
+                .AsNoTracking()
+                .Include(w => w.DailyEntry)
+                .Include(w => w.Well)
+                .Where(w => w.DailyEntry.EntryDate >= start.AddDays(-1) &&
+                            w.DailyEntry.EntryDate <= end)
+                .Select(w => new
+                {
+                    Well = w.Well.Name,
+                    Date = w.DailyEntry.EntryDate,
+                    Reading = w.MeterReading
+                })
+                .ToListAsync();
+
+            var result = data
+                .GroupBy(x => x.Well)
+                .Select(g =>
+                {
+                    var dailyMax = g
+                        .GroupBy(x => x.Date)
+                        .Select(d => new
+                        {
+                            Date = d.Key,
+                            Reading = d.Max(x => x.Reading)
+                        })
+                        .OrderBy(x => x.Date)
+                        .ToList();
+
+                    var daily = new List<DailyTotalDto>();
+
+                    for (int i = 0; i < dailyMax.Count; i++)
+                    {
+                        if (i == 0)
+                        {
+                            daily.Add(new DailyTotalDto
+                            {
+                                Date = dailyMax[i].Date,
+                                Gallons = 0
+                            });
+                            continue;
+                        }
+
+                        var gallons = dailyMax[i].Reading - dailyMax[i - 1].Reading;
+                        if (gallons < 0) gallons = 0;
+
+                        daily.Add(new DailyTotalDto
+                        {
+                            Date = dailyMax[i].Date,
+                            Gallons = gallons
+                        });
+                    }
+
+                    // remove baseline
+                    daily = daily.Skip(1).ToList();
+
+                    // anomaly detection
+                    var avg = daily.Any() ? daily.Average(d => d.Gallons) : 0;
+
+                    foreach (var d in daily)
+                    {
+                        d.IsAnomaly = avg > 0 && d.Gallons > avg * 1.5m;
+                    }
+
+                    return new
+                    {
+                        Well = g.Key,
+                        Total = daily.Sum(d => d.Gallons),
+                        Max = daily.Any() ? daily.Max(d => d.Gallons) : 0,
+                        Data = daily
+                    };
+                })
+                .OrderBy(x => x.Well)
+                .ToList();
+
+            return Ok(result);
+        }
+
+        // =====================================================
+        // LIST (Daily Log)
+        // =====================================================
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var entries = await _db.DailyEntries
+                .AsNoTracking()
+                .OrderByDescending(d => d.EntryDate)
+                .ThenByDescending(d => d.EntryTime)
+                .Select(d => new
+                {
+                    d.Id,
+                    d.EntryDate,
+                    d.EntryTime,
+                    WellCount = d.WellReadings.Count
+                })
+                .ToListAsync();
+
+            return Ok(entries);
+        }
+
         // =====================================================
         // DELETE
         // =====================================================
@@ -306,3 +373,4 @@ namespace Well_Readings.Controllers
         }
     }
 }
+

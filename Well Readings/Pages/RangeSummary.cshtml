@@ -63,7 +63,14 @@
                                     {
                                         <tr>
                                             <td>@d.Date</td>
-                                            <td>@d.Gallons.ToString("N0")</td>
+                                            <td style="color:@(d.IsAnomaly ? "red" : "black"); font-weight:@(d.IsAnomaly ? "bold" : "normal")">
+                                                @d.Gallons.ToString("N0")
+                                                @if (d.IsAnomaly)
+                                                {
+                                                    <span title="Possible leak">⚠️</span>
+                                                }
+                                            </td>
+
                                             <td>@d.CumulativeGallons.ToString("N0")</td>
                                         </tr>
                                     }
