@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>SCADA Water Dashboard</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- SCADA STYLE SHEET -->
+    <link rel="stylesheet" href="~/css/site.css" />
+
+    <!-- IMPORTANT: prevents Razor section crash -->
+    @RenderSection("Styles", required: false)
+</head>
+
+<body>
+
+    <!-- TOP NAV BAR -->
+    <div class="topbar">
+        <div class="brand">💧 WATER SCADA</div>
+
+        <div class="nav">
+            <a href="/Dashboard">Plant</a>
+            <a href="/DailyLog">Daily Entries</a>
+            <a href="/MonthlyReport">Reports</a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        <nav>
+            <a href="/Scada">SCADA</a> |
+            <a href="/Dashboard">Dashboard</a>
+        </nav>
+
+        @RenderBody()
+    </div>
+
+    <!-- IMPORTANT FIX: prevents your "Scripts section missing" crash -->
+    @RenderSection("Scripts", required: false)
+
+
+</body>
+</html>

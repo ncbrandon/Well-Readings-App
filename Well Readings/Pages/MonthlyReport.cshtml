@@ -1,172 +1,178 @@
 ﻿@page
 @model Well_Readings.Pages.MonthlyReportModel
 
-<h2>Monthly Well Report</h2>
+<h2 class="mb-3">Monthly SCADA Dashboard</h2>
 
-<form method="get" style="margin-bottom:20px;">
-    <label>Year</label>
-    <input type="number" asp-for="Year" min="2000" max="2100" />
+<!-- FILTER BAR -->
+<form method="get" class="row g-2 mb-3">
 
-    <label>Month</label>
-    <input type="number" asp-for="Month" min="1" max="12" />
+    <div class="col-auto">
+        <input type="number" name="year" value="@Model.Year" class="form-control" placeholder="Year" />
+    </div>
 
-    <label>Site</label>
-    <select name="Site" id="Site">
-        @foreach (var site in Model.AvailableSites.Concat(new[] { "Filtration Plant" }))
-        {
-            if (site == Model.Site)
-            {
-                <option value="@site" selected>@site</option>
-            }
-            else
-            {
-                <option value="@site">@site</option>
-            }
-        }
-    </select>
+    <div class="col-auto">
+        <input type="number" name="month" value="@Model.Month" class="form-control" placeholder="Month" />
+    </div>
 
-    <button type="submit">Run Report</button>
+    <div class="col-auto">
+        <button class="btn btn-primary">Load</button>
+    </div>
+
 </form>
 
-@if (!Model.Rows.Any())
+@if (Model.Rows == null || !Model.Rows.Any())
 {
-    <p>No data found for this month.</p>
+    <div class="alert alert-warning">
+        No data available for selected period.
+    </div>
 }
 else
 {
-    <table style="width:100%; border-collapse:collapse;">
-        <thead>
-            <tr style="border-bottom:2px solid #ccc;">
-                <th>Site</th>
-                <th>Gallons</th>
-                <th>Max Daily Gallons</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var site in Model.TotalGallonsPerSite.Keys.OrderBy(s => s))
-            {
-                <tr style="border-bottom:1px solid #ddd;">
-                    <td>@site</td>
-                    <td>@Model.TotalGallonsPerSite[site].ToString("N0")</td>
-                    <td>@(Model.MaxDailyGallonsPerSite.TryGetValue(site, out var v) ? v.ToString("N0") : "0")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <!-- KPI ROW -->
+    <div class="row mb-3">
 
-    <h3 style="margin-top:32px;">Entries for @(!string.IsNullOrEmpty(Model.Site) ? Model.Site : "All Sites")</h3>
-    <table style="width:100%; border-collapse:collapse;">
-        <thead>
-            <tr style="border-bottom:2px solid #ccc;">
-                <th>Date</th>
-                <th>Time</th>
-                <th>Well</th>
-                <th>Gallons</th>
-                <th>Chlorine</th>
-                <th>Phosphate</th>
-                <th>pH</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var row in Model.Rows
-                .Where(r => string.IsNullOrEmpty(Model.Site) || r.WellName.Contains(Model.Site))
-                .OrderBy(r => r.Date).ThenBy(r => r.EntryTime))
-            {
-                <tr style="border-bottom:1px solid #eee;">
-                    <td>@row.Date.ToString("yyyy-MM-dd")</td>
-                    <td>@row.EntryTime.ToString("HH:mm")</td>
-                    <td>@row.WellName</td>
-                    <td>@row.MeterReading.ToString("N0")</td>
-                    <td>@(row.Chlorine.HasValue ? row.Chlorine.Value.ToString("0.##") : "-")</td>
-                    <td>@(row.Phosphate.HasValue ? row.Phosphate.Value.ToString("0.##") : "-")</td>
-                    <td>@(row.Ph.HasValue ? row.Ph.Value.ToString("0.##") : "-")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+        <div class="col-md-4">
+            <div class="card text-bg-primary shadow">
+                <div class="card-body">
+                    <h6>Total Sites</h6>
+                    <h3>@Model.AvailableSites.Count</h3>
+                </div>
+            </div>
+        </div>
 
-    <table style="width:100%; border-collapse:collapse;">
-        <thead>
-            <tr style="border-bottom:2px solid #ccc;">
-                <th>Date</th>
-                <th>Site</th>
-                <th>Gallons</th>
-                <th>Chlorine</th>
-                <th>Phosphate</th>
-                <th>pH</th>
-            </tr>
-        </thead>
-        <tbody>
-            @{
-                var filteredRows = Model.Rows
-                    .Where(r => string.IsNullOrEmpty(Model.Site) || Model.GetSiteFromWell(r.WellName) == Model.Site)
-                    .GroupBy(r => new { r.Date, Site = Model.GetSiteFromWell(r.WellName) })
-                    .OrderBy(g => g.Key.Date)
-                    .ThenBy(g => g.Key.Site)
-                    .Select(g => new {
-                        Date = g.Key.Date,
-                        Site = g.Key.Site,
-                        Gallons = g.Sum(x => x.MeterReading), // This is cumulative, see note below
-                        Chlorine = g.Average(x => x.Chlorine ?? 0),
-                        Phosphate = g.Average(x => x.Phosphate ?? 0),
-                        Ph = g.Average(x => x.Ph ?? 0)
-                    });
-            }
-            @foreach (var row in filteredRows)
-            {
-                <tr style="border-bottom:1px solid #eee;">
-                    <td>@row.Date.ToString("yyyy-MM-dd")</td>
-                    <td>@row.Site</td>
-                    <td>@row.Gallons.ToString("N0")</td>
-                    <td>@(row.Chlorine > 0 ? row.Chlorine.ToString("0.##") : "-")</td>
-                    <td>@(row.Phosphate > 0 ? row.Phosphate.ToString("0.##") : "-")</td>
-                    <td>@(row.Ph > 0 ? row.Ph.ToString("0.##") : "-")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+        <div class="col-md-4">
+            <div class="card text-bg-success shadow">
+                <div class="card-body">
+                    <h6>Total Gallons</h6>
+                    <h3>
+                        @Model.TotalGallonsPerSite.Values.Sum()
+                    </h3>
+                </div>
+            </div>
+        </div>
 
-    @if (Model.Site == "Filtration Plant")
-    {
-        <table style="width:100%; border-collapse:collapse;">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Gallons Pumped</th>
-                    <th>Chlorine</th>
-                    <th>Phosphate</th>
-                    <th>pH</th>
-                    <th>Temperature</th>
-                </tr>
-            </thead>
-            <tbody>
-                @{
-                    // Assume Model.Rows is sorted by Date ascending
-                    var rows = Model.Rows.OrderBy(r => r.Date).ThenBy(r => r.EntryTime).ToList();
-                    for (int i = 0; i < rows.Count - 1; i++)
-                    {
-                        var today = rows[i];
-                        var tomorrow = rows[i + 1];
-                        var gallonsPumped = tomorrow.MeterReading - today.MeterReading;
-                }
-                }
-                @for (int i = 0; i < rows.Count - 1; i++)
-                {
-                    var today = rows[i];
-                    var tomorrow = rows[i + 1];
-                    var gallonsPumped = tomorrow.MeterReading - today.MeterReading;
+        <div class="col-md-4">
+            <div class="card text-bg-warning shadow">
+                <div class="card-body">
+                    <h6>Max Daily Site Output</h6>
+                    <h3>
+                        @Model.MaxDailyGallonsPerSite.Values.Max()
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SITE CARDS -->
+    <h4>Site Status</h4>
+
+    <div class="row mb-4">
+
+        @foreach (var site in Model.AvailableSites)
+        {
+            var total = Model.TotalGallonsPerSite[site];
+
+            <div class="col-md-3 mb-3">
+
+                <div class="card shadow border-0
+                            @(total > 50000 ? "bg-danger text-white"
+                                           : total > 20000 ? "bg-warning"
+                                           : "bg-success text-white")">
+
+            <div class="card-body">
+                <h6>@site</h6>
+                <h4>@total</h4>
+                <small>Gallons</small>
+            </div>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+
+    <!-- CHART -->
+    <div class="card mb-4 shadow">
+        <div class="card-body">
+            <h5>Production Distribution</h5>
+            <canvas id="siteChart"></canvas>
+        </div>
+    </div>
+
+    <!-- DETAIL TABLE -->
+    <div class="card shadow">
+        <div class="card-header">
+            Well-Level Detail
+        </div>
+
+        <div class="card-body p-0">
+
+            <table class="table table-hover mb-0">
+
+                <thead class="table-dark">
                     <tr>
-                        <td>@today.Date.ToString("yyyy-MM-dd")</td>
-                        <td>@today.EntryTime.ToString("HH:mm")</td>
-                        <td>@gallonsPumped.ToString("N0")</td>
-                        <td>@(today.Chlorine.HasValue ? today.Chlorine.Value.ToString("0.##") : "-")</td>
-                        <td>@(today.Phosphate.HasValue ? today.Phosphate.Value.ToString("0.##") : "-")</td>
-                        <td>@(today.Ph.HasValue ? today.Ph.Value.ToString("0.##") : "-")</td>
-                        <td>@(today.Temperature.HasValue ? today.Temperature.Value.ToString("0.##") : "-")</td>
+                        <th>Well</th>
+                        <th>Site</th>
+                        <th>Total</th>
+                        <th>Avg</th>
+                        <th>Days</th>
+                        <th>Status</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    }
+                </thead>
+
+                <tbody>
+
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr class="@(row.IsAnomaly ? "table-danger" : "")">
+
+                            <td>@row.WellName</td>
+                            <td>@row.Site</td>
+                            <td>@row.TotalProduction</td>
+                            <td>@row.AverageProduction</td>
+                            <td>@row.DaysReported</td>
+
+                            <td>
+                                @if (row.IsAnomaly)
+                                {
+                                    <span class="badge bg-danger">ALERT</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">OK</span>
+                                }
+                            </td>
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+    <!-- CHART SCRIPT -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const ctx = document.getElementById('siteChart');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.AvailableSites)),
+                datasets: [{
+                    label: 'Gallons by Site',
+                    data: @Html.Raw(Json.Serialize(
+                                            Model.AvailableSites.Select(s => Model.TotalGallonsPerSite[s])
+                                    )),
+                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+            }]
+        }
+    });
+</script>
 }

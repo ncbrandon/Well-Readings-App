@@ -1,0 +1,234 @@
+﻿body {
+    background: #0b1220;
+    color: #e2e8f0;
+    font-family: "Segoe UI", sans-serif;
+}
+
+/* ===== HEADER ===== */
+.title {
+    font-size: 22px;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+}
+
+/* ===== KPI ===== */
+.kpi-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 25px;
+}
+
+.kpi {
+    flex: 1;
+    background: #111827;
+    border: 1px solid #1f2937;
+    padding: 16px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.kpi-label {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.kpi-value {
+    font-size: 26px;
+    font-weight: bold;
+}
+
+/* ===== PANELS ===== */
+.panel {
+    background: #111827;
+    border: 1px solid #1f2937;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 25px;
+}
+
+/* ===== TREND ===== */
+.timeline {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.bar {
+    width: 24px;
+    text-align: center;
+}
+
+.bar-fill {
+    background: #22c55e;
+    width: 100%;
+    transition: height 0.3s;
+}
+
+.bar-label {
+    font-size: 9px;
+    margin-top: 3px;
+}
+
+/* ===== WELL GRID ===== */
+.well-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.well-card {
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    border-left: 4px solid #22c55e;
+    padding: 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+    .well-card:hover {
+        transform: scale(1.02);
+    }
+
+    /* ===== STATUS COLORS ===== */
+    .well-card.alarm {
+        border-left: 4px solid #ef4444;
+        background: #2a0f0f;
+        animation: blink 1s infinite;
+    }
+
+    .well-card.off {
+        border-left: 4px solid #6b7280;
+        opacity: 0.6;
+    }
+
+/* ===== TEXT ===== */
+.well-name {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.well-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+}
+
+/* ===== BLINK ANIMATION ===== */
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* ===== MINI TREND ===== */
+.sparkline {
+    height: 30px;
+    background: linear-gradient(to top, #22c55e, transparent);
+    margin-top: 6px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+}
+
+.modal-content {
+    background: #1e293b;
+    margin: 10% auto;
+    padding: 20px;
+    width: 70%;
+    border-radius: 8px;
+}
+
+.close {
+    float: right;
+    cursor: pointer;
+    font-size: 24px;
+}
+
+.card.alarm {
+    border-left: 5px solid red;
+    animation: flash 1s infinite;
+}
+
+@keyframes flash {
+    0% {
+        background: #111827;
+    }
+
+    50% {
+        background: #3b0a0a;
+    }
+
+    100% {
+        background: #111827;
+    }
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 10%;
+    left: 20%;
+    width: 60%;
+    background: #0f172a;
+    padding: 20px;
+    border: 2px solid #22c55e;
+}
+
+.modal-content {
+    color: white;
+}
+
+.well-card {
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.well-card:hover {
+    transform: scale(1.03);
+}
+
+    .well-card.alert {
+        animation: flash 1s infinite;
+        border-left: 5px solid red;
+    }
+
+@keyframes flash {
+    0% {
+        background: #3b1e1e;
+    }
+
+    50% {
+        background: #7f1d1d;
+    }
+
+    100% {
+        background: #3b1e1e;
+    }
+}
+
+.mini-chart {
+    display: flex;
+    align-items: flex-end;
+    height: 50px;
+    gap: 2px;
+}
+
+.mini-bar {
+    width: 4px;
+    background: #22c55e;
+}

@@ -1,12 +1,20 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Text.Json;
-using Well_Readings.DTOs;
+using System.Net.Http.Json;
+using Well_Readings.DTOs.API;
+using Well_Readings.Services;
 
 namespace Well_Readings.Pages
 {
     public class RangeSummaryModel : PageModel
     {
+        private readonly IReportsClient _reportsClient;
+
+        public RangeSummaryModel(IReportsClient reportsClient)
+        {
+            _reportsClient = reportsClient;
+        }
+
         [BindProperty(SupportsGet = true)]
         public DateOnly Start { get; set; }
 
@@ -19,32 +27,11 @@ namespace Well_Readings.Pages
 
         public async Task OnGetAsync()
         {
-            if (Start == default)
-                Start = DateOnly.FromDateTime(DateTime.Today.AddDays(-7));
+            var rawRows = await _reportsClient.GetRange(Start, End);
 
-            if (End == default)
-                End = DateOnly.FromDateTime(DateTime.Today);
+            Rows = rawRows;
 
-            using var client = new HttpClient();
-
-            var response = await client.GetAsync(
-                $"https://localhost:7090/api/daily-entries/reports/range-summary" +
-                $"?start={Start:yyyy-MM-dd}&end={End:yyyy-MM-dd}");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new Exception($"API Error: {response.StatusCode} - {error}");
-            }
-
-            var json = await response.Content.ReadAsStringAsync();
-
-            Rows = JsonSerializer.Deserialize<List<RangeSummaryRowDto>>(
-                json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-            ) ?? new();
-
-            TotalGallonsAllSites = Rows.Sum(r => r.TotalGallons);
+            TotalGallonsAllSites = Rows.Sum(r => r.TotalProduction);
         }
     }
 }

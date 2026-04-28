@@ -14,48 +14,53 @@ namespace Well_Readings.Data
         public DbSet<WellReading> WellReadings { get; set; }
         public DbSet<FiltrationPlantReading> FiltrationPlantReadings { get; set; }
         public DbSet<Well> Wells { get; set; }
+        public DbSet<WellAlarmConfig> WellAlarmConfigs { get; set; }
+        public DbSet<ScadaHistoryPoint> ScadaHistoryPoints { get; set; }
+
+        public DbSet<Plant> Plants { get; set; }
+
+
+        public DbSet<WellAlarm> WellAlarms => Set<WellAlarm>();
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // ---- Relationships ----
+            modelBuilder.Entity<WellReading>()
+                .HasOne(w => w.DailyEntry)
+                .WithMany(d => d.WellReadings)
+                .HasForeignKey(w => w.DailyEntryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<WellReading>()
+                .HasOne(w => w.Well)
+                .WithMany()
+                .HasForeignKey(w => w.WellId);
+
             // ---- Well readings ----
             modelBuilder.Entity<WellReading>(entity =>
             {
-                entity.Property(e => e.MeterReading)
-                      .HasPrecision(18, 0);
-
-                entity.Property(e => e.Chlorine)
-                      .HasPrecision(3, 1);
-
-                entity.Property(e => e.Phosphate)
-                      .HasPrecision(3, 1);
-
-                entity.Property(e => e.Ph)
-                      .HasPrecision(3, 1);
+                entity.Property(e => e.MeterReading).HasPrecision(18, 0);
+                entity.Property(e => e.Chlorine).HasPrecision(3, 1);
+                entity.Property(e => e.Phosphate).HasPrecision(3, 1);
+                entity.Property(e => e.Ph).HasPrecision(3, 1);
             });
 
             // ---- Filtration plant ----
             modelBuilder.Entity<FiltrationPlantReading>(entity =>
             {
-                entity.Property(e => e.FilterPlantMeterReading)
-                      .HasPrecision(18, 0);
+                entity.HasKey(x => x.Id);
 
-                entity.Property(e => e.MtJeffersonMeterReading)
-                      .HasPrecision(18, 0);
-
-                entity.Property(e => e.Chlorine)
-                      .HasPrecision(3, 1);
-
-                entity.Property(e => e.Phosphate)
-                      .HasPrecision(3, 1);
-
-                entity.Property(e => e.Ph)
-                      .HasPrecision(3, 1);
-
-                entity.Property(e => e.Temperature)
-                      .HasPrecision(3, 1);
+                entity.Property(x => x.FlowRate);
+                entity.Property(x => x.Turbidity);
+                entity.Property(x => x.Chlorine);
+                entity.Property(x => x.Ph);
+                entity.Property(x => x.Temperature);
+                entity.Property(x => x.Timestamp);
             });
+
         }
     }
 }

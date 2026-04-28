@@ -1,111 +1,40 @@
 ﻿@page
 @model Well_Readings.Pages.RangeSummaryModel
 
-<h2>Date Range Summary</h2>
+<h2>Range Summary</h2>
 
 <form method="get">
-    <label>Start Date</label>
-    <input type="date" asp-for="Start" />
+    <label>Start Date:</label>
+    <input type="date" name="startDate" />
 
-    <label>End Date</label>
-    <input type="date" asp-for="End" />
+    <label>End Date:</label>
+    <input type="date" name="endDate" />
 
-    <button type="submit">Run Summary</button>
+    <button type="submit">Load</button>
 </form>
 
-@if (Model.Rows.Any())
+<hr />
+
+@if (Model.Rows != null && Model.Rows.Any())
 {
-    <div style="margin:15px 0; font-weight:bold; font-size:1.1em;">
-        Total Gallons (All Sites):
-        <strong style="margin-left:10px;">
-            @Model.TotalGallonsAllSites.ToString("N0")
-        </strong>
-    </div>
-
-    <table style="width:100%; border-collapse:collapse;">
-        <thead>
-            <tr style="border-bottom:2px solid #ccc;">
-                <th style="text-align:left; padding:6px;">Well</th>
-                <th style="text-align:left; padding:6px;">Total Gallons</th>
-                <th style="text-align:left; padding:6px;">Max Daily Gallons</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            @foreach (var row in Model.Rows)
-            {
-                var maxDaily = row.DailyTotals.Any()
-                ? row.DailyTotals.Max(d => d.Gallons)
-                : 0;
-
-                <tr style="border-bottom:1px solid #ddd;">
-                    <td style="padding:6px;">@row.WellName</td>
-                    <td style="padding:6px;">@row.TotalGallons.ToString("N0")</td>
-                    <td style="padding:6px;">@maxDaily.ToString("N0")</td>
-                </tr>
-
-                <!-- OPTIONAL: Expandable daily breakdown -->
-                <tr>
-                    <td colspan="3" style="padding:6px;">
-                        <details>
-                            <summary style="cursor:pointer;">View Daily Breakdown</summary>
-
-                            <table style="width:100%; margin-top:8px;">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Gallons</th>
-                                        <th>Cumulative</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var d in row.DailyTotals)
-                                    {
-                                        <tr>
-                                            <td>@d.Date</td>
-                                            <td style="color:@(d.IsAnomaly ? "red" : "black"); font-weight:@(d.IsAnomaly ? "bold" : "normal")">
-                                                @d.Gallons.ToString("N0")
-                                                @if (d.IsAnomaly)
-                                                {
-                                                    <span title="Possible leak">⚠️</span>
-                                                }
-                                            </td>
-
-                                            <td>@d.CumulativeGallons.ToString("N0")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </details>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-else
-{
-    <p>No data found for selected range.</p>
-}
-
-
-@if (Model.Rows.Any())
-{
-    <table>
+    <p><strong>Total Gallons (All Sites):</strong> @Model.TotalGallonsAllSites</p>
+    <table class="table">
         <thead>
             <tr>
-                <th>Site</th>
-                <th>Total Gallons</th>
-                <th>Max Daily Gallons</th>
+                <th>Well</th>
+                <th>Total Production</th>
+                <th>Min Reading</th>
+                <th>Max Reading</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var row in Model.Rows)
             {
                 <tr>
-                    <td>@row.Site</td>
-                    <td>@row.TotalGallons.ToString("N0")</td>
-                    <td>@row.MaxDailyGallons.ToString("N0")</td>
+                    <td>@row.WellName</td>
+                    <td>@row.TotalProduction</td>
+                    <td>@row.MinReading</td>
+                    <td>@row.MaxReading</td>
                 </tr>
             }
         </tbody>
@@ -113,5 +42,5 @@ else
 }
 else
 {
-    <p>No data found for the selected date range.</p>
+    <p>No data found.</p>
 }

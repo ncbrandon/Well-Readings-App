@@ -12,8 +12,8 @@ using Well_Readings.Data;
 namespace Well_Readings.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260414164234_FixFiltrationPlantPrecision")]
-    partial class FixFiltrationPlantPrecision
+    [Migration("20260422120144_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,21 @@ namespace Well_Readings.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Well", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Wells");
+                });
 
             modelBuilder.Entity("Well_Readings.Models.DailyEntry", b =>
                 {
@@ -52,8 +67,8 @@ namespace Well_Readings.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("Chlorine")
-                        .HasPrecision(4, 1)
-                        .HasColumnType("decimal(4,1)");
+                        .HasPrecision(3, 1)
+                        .HasColumnType("decimal(3,1)");
 
                     b.Property<Guid>("DailyEntryId")
                         .HasColumnType("uniqueidentifier");
@@ -71,12 +86,12 @@ namespace Well_Readings.Migrations
                         .HasColumnType("decimal(3,1)");
 
                     b.Property<decimal?>("Phosphate")
-                        .HasPrecision(4, 1)
-                        .HasColumnType("decimal(4,1)");
+                        .HasPrecision(3, 1)
+                        .HasColumnType("decimal(3,1)");
 
                     b.Property<decimal?>("Temperature")
-                        .HasPrecision(4, 1)
-                        .HasColumnType("decimal(4,1)");
+                        .HasPrecision(3, 1)
+                        .HasColumnType("decimal(3,1)");
 
                     b.HasKey("Id");
 
@@ -93,31 +108,32 @@ namespace Well_Readings.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("Chlorine")
-                        .HasPrecision(1, 1)
-                        .HasColumnType("decimal(1,1)");
+                        .HasPrecision(3, 1)
+                        .HasColumnType("decimal(3,1)");
 
                     b.Property<Guid>("DailyEntryId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("MeterReading")
-                        .HasPrecision(9)
-                        .HasColumnType("decimal(9,0)");
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
 
                     b.Property<decimal?>("Ph")
-                        .HasPrecision(2, 1)
-                        .HasColumnType("decimal(2,1)");
+                        .HasPrecision(3, 1)
+                        .HasColumnType("decimal(3,1)");
 
                     b.Property<decimal?>("Phosphate")
-                        .HasPrecision(1, 1)
-                        .HasColumnType("decimal(1,1)");
+                        .HasPrecision(3, 1)
+                        .HasColumnType("decimal(3,1)");
 
-                    b.Property<string>("WellName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid>("WellId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DailyEntryId");
+
+                    b.HasIndex("WellId");
 
                     b.ToTable("WellReadings");
                 });
@@ -141,13 +157,25 @@ namespace Well_Readings.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Well", "Well")
+                        .WithMany("WellReadings")
+                        .HasForeignKey("WellId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("DailyEntry");
+
+                    b.Navigation("Well");
+                });
+
+            modelBuilder.Entity("Well", b =>
+                {
+                    b.Navigation("WellReadings");
                 });
 
             modelBuilder.Entity("Well_Readings.Models.DailyEntry", b =>
                 {
-                    b.Navigation("FiltrationPlantReading")
-                        .IsRequired();
+                    b.Navigation("FiltrationPlantReading");
 
                     b.Navigation("WellReadings");
                 });

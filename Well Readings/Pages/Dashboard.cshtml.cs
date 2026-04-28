@@ -1,55 +1,88 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Text.Json;
+using System.Net.Http.Json;
 
-namespace Well_Readings.Pages
+namespace Well_Readings.Pages;
+
+public class DashboardModel : PageModel
 {
-    public class DashboardModel : PageModel
+    private readonly IHttpClientFactory _http;
+
+    public DashboardModel(IHttpClientFactory http)
     {
-        [BindProperty(SupportsGet = true)]
-        public DateOnly Start { get; set; }
+        _http = http;
+    }
+    [BindProperty(SupportsGet = true)]
+    public DateTime? Timestamp { get; set; }
 
-        [BindProperty(SupportsGet = true)]
-        public DateOnly End { get; set; }
+    // ===== KPI =====
+    public decimal TotalToday { get; set; }
+    public decimal TotalMonth { get; set; }
+    public int ActiveWells { get; set; }
 
-        public List<DashboardWell> Wells { get; set; } = new();
+    // ===== Trend =====
+    public List<string> Dates { get; set; } = new();
+    public List<decimal> DailyTotals { get; set; } = new();
 
-        public async Task OnGetAsync()
-        {
-            if (Start == default)
-                Start = DateOnly.FromDateTime(DateTime.Today.AddDays(-7));
+    // ===== SCADA =====
+    public List<ScadaWellDto> Wells { get; set; } = new();
 
-            if (End == default)
-                End = DateOnly.FromDateTime(DateTime.Today);
+    public int AlarmCount => Wells.Count(x => x.IsAlarm);
 
-            using var client = new HttpClient();
+    public async Task OnGetAsync()
+    {
+        if (Timestamp == null)
+            Timestamp = DateTime.Now;
 
-            var url = $"https://localhost:7090/api/daily-entries/reports/dashboard?start={Start}&end={End}";
+        var client = _http.CreateClient();
 
-            var res = await client.GetAsync(url);
+        // 🔹 PARALLEL CALLS (important for performance)
+        var dashboardTask = client.GetFromJsonAsync<List<DashboardDto>>(
+            "https://localhost:7090/api/dashboard"
+        );
 
-            var json = await res.Content.ReadAsStringAsync();
+        var scadaTask = client.GetFromJsonAsync<List<ScadaWellDto>>(
+            "https://localhost:7090/api/dashboard?timestamp={Timestamp:0}"
+        );
 
-            if (!res.IsSuccessStatusCode)
-                throw new Exception(json);
+        await Task.WhenAll(dashboardTask!, scadaTask!);
 
-            Wells = JsonSerializer.Deserialize<List<DashboardWell>>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-        }
+        var dashboard = dashboardTask!.Result ?? new();
+        Wells = scadaTask!.Result ?? new();
 
-        public class DashboardWell
-        {
-            public string Well { get; set; } = "";
-            public decimal Total { get; set; }
-            public decimal Max { get; set; }
-            public List<Daily> Data { get; set; } = new();
-        }
+        // ===== KPI =====
+        TotalToday = dashboard.Sum(x => x.TodayTotal);
+        TotalMonth = dashboard.Sum(x => x.MonthTotal);
+        ActiveWells = Wells.Count;
 
-        public class Daily
-        {
-            public DateOnly Date { get; set; }
-            public decimal Gallons { get; set; }
-            public bool IsAnomaly { get; set; }
-        }
+        // ===== TREND =====
+        Dates = dashboard
+            .OrderBy(x => x.Date)
+            .Select(x => x.Date.ToString("MM-dd"))
+            .ToList();
+
+        DailyTotals = dashboard
+            .OrderBy(x => x.Date)
+            .Select(x => x.Total)
+            .ToList();
+    }
+
+    // ===== DTOs =====
+
+    public class DashboardDto
+    {
+        public string WellName { get; set; } = "";
+        public DateOnly Date { get; set; }
+        public decimal TodayTotal { get; set; }
+        public decimal MonthTotal { get; set; }
+        public decimal Total { get; set; }
+    }
+
+    public class ScadaWellDto
+    {
+        public string WellName { get; set; } = "";
+        public decimal LastReading { get; set; }
+        public decimal TotalGallons { get; set; }
+        public bool IsAlarm { get; set; }
     }
 }

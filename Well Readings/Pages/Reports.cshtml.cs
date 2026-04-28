@@ -18,7 +18,7 @@ namespace Well_Readings.Pages
     public class WellSummaryRow
     {
         public string WellName { get; set; } = "";
-        public decimal TotalGallons { get; set; }
+        public decimal TotalProduction { get; set; }
         public int DaysPumped { get; set; }
     }
 

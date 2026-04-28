@@ -22,6 +22,21 @@ namespace Well_Readings.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Well", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Wells");
+                });
+
             modelBuilder.Entity("Well_Readings.Models.DailyEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -37,7 +52,12 @@ namespace Well_Readings.Migrations
                     b.Property<TimeOnly>("EntryTime")
                         .HasColumnType("time");
 
+                    b.Property<Guid?>("FiltrationPlantReadingId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("FiltrationPlantReadingId");
 
                     b.ToTable("DailyEntries");
                 });
@@ -48,39 +68,113 @@ namespace Well_Readings.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal?>("Chlorine")
-                        .HasPrecision(3, 1)
-                        .HasColumnType("decimal(3,1)");
+                    b.Property<decimal>("Chlorine")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("DailyEntryId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<decimal>("FlowRate")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("FilterPlantMeterReading")
-                        .HasPrecision(18)
-                        .HasColumnType("decimal(18,0)");
+                    b.Property<bool>("IsAlarm")
+                        .HasColumnType("bit");
 
-                    b.Property<decimal>("MtJeffersonMeterReading")
-                        .HasPrecision(18)
-                        .HasColumnType("decimal(18,0)");
+                    b.Property<decimal>("Ph")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal?>("Ph")
-                        .HasPrecision(3, 1)
-                        .HasColumnType("decimal(3,1)");
+                    b.Property<decimal>("Temperature")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal?>("Phosphate")
-                        .HasPrecision(3, 1)
-                        .HasColumnType("decimal(3,1)");
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
 
-                    b.Property<decimal?>("Temperature")
-                        .HasPrecision(3, 1)
-                        .HasColumnType("decimal(3,1)");
+                    b.Property<decimal>("Turbidity")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DailyEntryId")
-                        .IsUnique();
-
                     b.ToTable("FiltrationPlantReadings");
+                });
+
+            modelBuilder.Entity("Well_Readings.Models.Plant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Plants");
+                });
+
+            modelBuilder.Entity("Well_Readings.Models.ScadaHistoryPoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MetricType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("WellName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ScadaHistoryPoints");
+                });
+
+            modelBuilder.Entity("Well_Readings.Models.WellAlarm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("HighLimit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LowLimit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("WellId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WellAlarms");
+                });
+
+            modelBuilder.Entity("Well_Readings.Models.WellAlarmConfig", b =>
+                {
+                    b.Property<Guid>("WellId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("HighThreshold")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsAcknowledged")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastAlarmTime")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("WellId");
+
+                    b.ToTable("WellAlarmConfigs");
                 });
 
             modelBuilder.Entity("Well_Readings.Models.WellReading", b =>
@@ -89,45 +183,63 @@ namespace Well_Readings.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal?>("Chlorine")
+                    b.Property<decimal?>("AlarmThreshold")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Chlorine")
                         .HasPrecision(3, 1)
                         .HasColumnType("decimal(3,1)");
 
-                    b.Property<Guid>("DailyEntryId")
+                    b.Property<Guid?>("DailyEntryId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsAlarm")
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("MeterReading")
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<decimal?>("Ph")
+                    b.Property<decimal>("Ph")
                         .HasPrecision(3, 1)
                         .HasColumnType("decimal(3,1)");
 
-                    b.Property<decimal?>("Phosphate")
+                    b.Property<decimal>("Phosphate")
                         .HasPrecision(3, 1)
                         .HasColumnType("decimal(3,1)");
 
-                    b.Property<string>("WellName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid?>("PlantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("WellId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("WellId1")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DailyEntryId");
 
+                    b.HasIndex("PlantId");
+
+                    b.HasIndex("WellId");
+
+                    b.HasIndex("WellId1");
+
                     b.ToTable("WellReadings");
                 });
 
-            modelBuilder.Entity("Well_Readings.Models.FiltrationPlantReading", b =>
+            modelBuilder.Entity("Well_Readings.Models.DailyEntry", b =>
                 {
-                    b.HasOne("Well_Readings.Models.DailyEntry", "DailyEntry")
-                        .WithOne("FiltrationPlantReading")
-                        .HasForeignKey("Well_Readings.Models.FiltrationPlantReading", "DailyEntryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("Well_Readings.Models.FiltrationPlantReading", "FiltrationPlantReading")
+                        .WithMany()
+                        .HasForeignKey("FiltrationPlantReadingId");
 
-                    b.Navigation("DailyEntry");
+                    b.Navigation("FiltrationPlantReading");
                 });
 
             modelBuilder.Entity("Well_Readings.Models.WellReading", b =>
@@ -135,18 +247,40 @@ namespace Well_Readings.Migrations
                     b.HasOne("Well_Readings.Models.DailyEntry", "DailyEntry")
                         .WithMany("WellReadings")
                         .HasForeignKey("DailyEntryId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Well_Readings.Models.Plant", null)
+                        .WithMany("Readings")
+                        .HasForeignKey("PlantId");
+
+                    b.HasOne("Well", "Well")
+                        .WithMany()
+                        .HasForeignKey("WellId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Well", null)
+                        .WithMany("WellReadings")
+                        .HasForeignKey("WellId1");
+
                     b.Navigation("DailyEntry");
+
+                    b.Navigation("Well");
+                });
+
+            modelBuilder.Entity("Well", b =>
+                {
+                    b.Navigation("WellReadings");
                 });
 
             modelBuilder.Entity("Well_Readings.Models.DailyEntry", b =>
                 {
-                    b.Navigation("FiltrationPlantReading")
-                        .IsRequired();
-
                     b.Navigation("WellReadings");
+                });
+
+            modelBuilder.Entity("Well_Readings.Models.Plant", b =>
+                {
+                    b.Navigation("Readings");
                 });
 #pragma warning restore 612, 618
         }

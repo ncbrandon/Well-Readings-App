@@ -1,188 +1,190 @@
 ﻿@page
 @model Well_Readings.Pages.DailyEntryModel
 
-<style>
-    .tabs {
-        display: flex;
-        margin-bottom: 10px;
-    }
+<h2 class="mb-3">Daily Entry Details</h2>
 
-    .tab-button {
-        flex: 1;
-        padding: 10px;
-        border: 1px solid #ccc;
-        background: #eee;
-        cursor: pointer;
-        font-size: 1em;
-    }
-
-        .tab-button.active {
-            background: #fff;
-            border-bottom: none;
-            font-weight: bold;
-        }
-
-    .tab-content {
-        display: none;
-        border: 1px solid #ccc;
-        padding: 10px;
-    }
-
-        .tab-content.active {
-            display: block;
-        }
-</style>
-
-<h2>Daily Entry</h2>
-
-@if (!ViewData.ModelState.IsValid)
+@if (Model.Entry == null)
 {
-    <div style="color:red; font-weight:bold;">
-        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-        {
-            <div>@error.ErrorMessage</div>
-        }
+    <div class="alert alert-warning">
+        No entry found.
     </div>
 }
+else
+{
+    <!-- HEADER -->
+    <div class="card mb-3">
+        <div class="card-body">
 
+            <h4>
+                @Model.Entry.EntryDate.ToString("yyyy-MM-dd")
+                <small class="text-muted">
+                    @Model.Entry.EntryTime.ToString("HH:mm")
+                </small>
+            </h4>
 
-<form method="post">
-    @Html.AntiForgeryToken()
-
-    <input type="hidden" asp-for="Entry.Id" />
-
-    <label>Date</label><br />
-    <input type="date" asp-for="Entry.EntryDate" /><br /><br />
-
-    <label>Time</label><br />
-    <input type="time" asp-for="Entry.EntryTime" step="1" /><br /><br />
-
-    <div class="tabs">
-        <button type="button" class="tab-button active"
-                onclick="showTab('wells', this)">
-            Wells
-        </button>
-        <button type="button" class="tab-button"
-                onclick="showTab('filtration', this)">
-            Filtration
-        </button>
-        <button type="button" class="tab-button"
-                onclick="showTab('pumps', this)">
-            Pumps
-        </button>
+        </div>
     </div>
 
-    <div id="wells" class="tab-content active">
-        <h3>Wells</h3>
+    <!-- KPI ROW -->
+    <div class="row mb-3">
 
-        @for (int i = 0; i < Model.Wells.Count; i++)
-        {
-            <fieldset style="margin-bottom:20px; padding:10px; border:1px solid #ccc;">
-                <legend><strong>@Model.Wells[i]</strong></legend>
+        <div class="col-md-4">
+            <div class="card text-bg-primary">
+                <div class="card-body">
+                    <h6>Total Wells</h6>
+                    <h3>@Model.Entry.Wells.Count</h3>
+                </div>
+            </div>
+        </div>
 
-                <input type="hidden"
-                       name="Entry.WellReadings[@i].WellName"
-                       value="@Model.Wells[i]" />
+        <div class="col-md-4">
+            <div class="card text-bg-success">
+                <div class="card-body">
+                    <h6>Total Gallons</h6>
+                    <h3>@Model.Entry.TotalGallons</h3>
+                </div>
+            </div>
+        </div>
 
-                <label>Meter Reading</label>
-                <br />
-                <input type="number"
-                       name="Entry.WellReadings[@i].MeterReading"
-                       value="@Model.Entry.WellReadings[@i].MeterReading" />
+        <div class="col-md-4">
+            <div class="card text-bg-warning">
+                <div class="card-body">
+                    <h6>Max Reading</h6>
+                    <h3>@Model.Entry.MaxGallons</h3>
+                </div>
+            </div>
+        </div>
 
-                <br />
-                <br />
+    </div>
 
-                <label>Chlorine</label>
-                <br />
-                <input type="number" step="0.1"
-                       name="Entry.WellReadings[@i].Chlorine"
-                       value="@Model.Entry.WellReadings[@i].Chlorine" />
-                <br />
-                <br />
+    <!-- TABLE -->
+    <div class="card">
+        <div class="card-header">
+            Well Readings
+        </div>
 
-                <label>Phosphate</label>
-                <br />
-                <input type="number" step="0.1"
-                       name="Entry.WellReadings[@i].Phosphate"
-                       value="@Model.Entry.WellReadings[@i].Phosphate" />
-                <br />
-                <br />
+        <div class="card-body p-0">
 
-                <label>pH</label>
-                <br />
-                <input type="number" step="0.1"
-                       name="Entry.WellReadings[@i].Ph"
-                       value="@Model.Entry.WellReadings[@i].Ph" />
-            </fieldset>
+            <table class="table table-striped mb-0">
+
+                <thead>
+                    <tr>
+                        <th>Well</th>
+                        <th>Reading</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var w in Model.Entry.Wells)
+                    {
+                        <tr onclick="openEdit('@w.WellName', @w.Gallons)" style="cursor:pointer;">
+
+                            <td>@w.WellName</td>
+                            <td>@w.Gallons</td>
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+    <hr />
+
+    <h4>Well Distribution</h4>
+
+    <canvas id="wellChart" height="100"></canvas>
+
+    <script>
+        const ctx = document.getElementById('wellChart');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.Entry.Wells.Select(w => w.WellName))),
+                datasets: [{
+                    label: 'Gallons',
+                    data: @Html.Raw(Json.Serialize(Model.Entry.Wells.Select(w => w.Gallons))),
+                    borderWidth: 1
+                }]
+            }
+        });
+    </script>
+
+
+    <!-- ACTIONS -->
+    <div class="mt-3 d-flex gap-2">
+
+        <a asp-page="/DailyLog" class="btn btn-secondary">
+            Back
+        </a>
+
+        <a asp-page="/EditDailyEntry"
+           asp-route-id="@Model.Entry.Id"
+           class="btn btn-primary">
+            Edit
+        </a>
+
+        <form method="post"
+              asp-page-handler="Delete"
+              asp-route-id="@Model.Entry.Id"
+              onsubmit="return confirm('Delete this entry?');">
+
+            <button class="btn btn-danger">
+                Delete
+            </button>
+
+        </form>
+
+    </div>
+    <a class="btn btn-outline-dark" href="javascript:window.print()">
+        Print Report
+    </a>
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Reading</h5>
+                </div>
+
+                <div class="modal-body">
+
+                    <input type="hidden" id="wellId" />
+
+                    <div class="mb-3">
+                        <label>Well</label>
+                        <input id="wellName" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Gallons</label>
+                        <input id="gallons" type="number" class="form-control" />
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <script>
+        function openEdit(name, gallons) {
+            document.getElementById("wellName").value = name;
+            document.getElementById("gallons").value = gallons;
+
+            var modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
         }
-    </div>
 
-    <div id="filtration" class="tab-content">
-        <h3>Filtration Plant</h3>
-
-        <label>Which unit is running?</label>
-        <select asp-for="Entry.FiltrationPlant.UnitSelection">
-            <option value="">-- Select --</option>
-            <option value="Unit1">Unit 1</option>
-            <option value="Unit2">Unit 2</option>
-            <option value="Both">Both</option>
-        </select>
-        <br /><br />
-
-        @for (int i = 1; i <= 2; i++)
-        {
-            <fieldset style="margin-bottom:20px; padding:10px; border:1px solid #ccc;">
-                <legend><strong>Unit @i</strong></legend>
-                <label>Feed Pressure</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FeedPressure" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FeedPressure" /><br /><br />
-
-                <label>Feed Flow</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FeedFlow" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FeedFlow" /><br /><br />
-
-                <label>Filtrate Pressure</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FiltratePressure" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FiltratePressure" /><br /><br />
-
-                <label>Filtrate Flow</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].FiltrateFlow" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.FiltrateFlow" /><br /><br />
-
-                <label>TMP</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].TMP" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.TMP" /><br /><br />
-
-                <label>Total Filter Run Time</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].TotalFilterRunTime" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.TotalFilterRunTime" /><br /><br />
-
-                <label>Total Filtration Flow Yesterday</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].TotalFiltrationFlowYesterday" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.TotalFiltrationFlowYesterday" /><br /><br />
-
-                <label>Pressure Decay</label><br />
-                <input type="number" step="0.1" name="Entry.FiltrationPlant.Units[@(i-1)].PressureDecay" value="@Model.Entry.FiltrationPlant?.Units.ElementAtOrDefault(i-1)?.PressureDecay" /><br /><br />
-            </fieldset>
+        function saveEdit() {
+            alert("Hook this to API later (PUT endpoint)");
         }
-    </div>
+    </script>
 
-    <div id="pumps" class="tab-content">
-        <h3>Pump Stations</h3>
-        <p>Pump station entry coming next.</p>
-    </div>
-
-    <div style="position: sticky; bottom: 0; background: #fff; padding: 10px; border-top: 1px solid #ccc;">
-        <button type="submit"
-                style="width:100%; font-size:1.3em; padding:12px;">
-            Submit Daily Entry
-        </button>
-    </div>
-</form>
-
-<script>
-    function showTab(tabId, button) {
-        document.querySelectorAll('.tab-content')
-            .forEach(t => t.classList.remove('active'));
-
-        document.querySelectorAll('.tab-button')
-            .forEach(b => b.classList.remove('active'));
-
-        document.getElementById(tabId).classList.add('active');
-        button.classList.add('active');
-    }
-</script>
+}
