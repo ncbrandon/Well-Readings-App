@@ -61,6 +61,29 @@ namespace Well_Readings.Data
                 entity.Property(x => x.Timestamp);
             });
 
+            // ---- SCADA history points ----
+            modelBuilder.Entity<ScadaHistoryPoint>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Location)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.MetricType)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.SourceColumn)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.Value)
+                    .HasPrecision(18, 3);
+
+                entity.HasIndex(x => new { x.Timestamp, x.Location, x.MetricType });
+            });
+
         }
     }
 }
