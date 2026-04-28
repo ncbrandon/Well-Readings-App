@@ -1,0 +1,328 @@
+﻿@page
+@model Well_Readings.Pages.ScadaEntryModel
+
+<h1>Daily SCADA Entry</h1>
+
+<div class="entry-header">
+    <label>Entry Date:</label>
+    <input type="date" id="entryDate" />
+</div>
+
+<div id="siteTiles" class="site-grid"></div>
+
+<div id="entryPanel" class="entry-panel" style="display:none;">
+    <h2 id="siteTitle"></h2>
+    <div id="entryFields"></div>
+</div>
+
+<button type="button" onclick="submitReadings()">Submit Readings</button>
+
+<div id="message"></div>
+
+<style>
+    .entry-header {
+        margin-bottom: 20px;
+    }
+
+    .site-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .site-tile {
+        background: #1f2937;
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .site-tile.complete {
+        background: #047857;
+    }
+
+    .entry-panel {
+        background: #f3f4f6;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+
+    .field-row {
+        margin-bottom: 12px;
+    }
+
+    .field-row label {
+        display: inline-block;
+        width: 180px;
+        font-weight: bold;
+    }
+
+    .field-row input {
+        padding: 8px;
+        width: 160px;
+    }
+
+    .submit-btn {
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    #message {
+        margin-top: 20px;
+        font-weight: bold;
+    }
+    #entryPanel,
+    #entryPanel h2,
+    #entryPanel h3,
+    #entryPanel label,
+    #entryPanel input {
+        color: #111827;
+    }
+
+        #entryPanel input {
+            background-color: #ffffff;
+            border: 1px solid #374151;
+        }
+
+</style>
+
+<script>
+    const sites = [
+    {
+        siteName: "Reeves Well Site",
+        displayName: "Reeves Well",
+        wells: [
+            "Reeves Well A",
+            "Reeves Well B"
+        ],
+        chemistry: true
+    },
+    {
+        siteName: "Park Well Site",
+        displayName: "Park Well",
+        wells: [
+            "Park Well",
+            "Park Well A",
+            "Park Well B"
+        ],
+        chemistry: true
+    }
+        ];
+        {
+            name: "Woods",
+            fields: [
+                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Woods" },
+                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-W" },
+                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-W" },
+                { label: "pH", metricType: "pH", sourceColumn: "pH-W" }
+            ]
+        },
+        {
+            name: "Catawissa",
+            fields: [
+                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Catawissa" },
+                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-C" },
+                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-C" },
+                { label: "pH", metricType: "pH", sourceColumn: "pH-C" }
+            ]
+        },
+        {
+            name: "New",
+            fields: [
+                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "New" },
+                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-N" },
+                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-N" },
+                { label: "pH", metricType: "pH", sourceColumn: "pH-N" }
+            ]
+        },
+        {
+            name: "Oakwood",
+            fields: [
+                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Oakwood" },
+                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-O" },
+                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-O" },
+                { label: "pH", metricType: "pH", sourceColumn: "pH-O" }
+            ]
+        },
+        {
+            name: "Ray",
+            fields: [
+                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Ray" },
+                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-Ray" },
+                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-Ray" },
+                { label: "pH", metricType: "pH", sourceColumn: "pH-Ray" }
+            ]
+        },
+        {
+            name: "Filter Plant",
+            fields: [
+                { label: "Feed Flow", metricType: "Feed Flow", sourceColumn: "Feed Flow" },
+                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-F" },
+                { label: "pH", metricType: "pH", sourceColumn: "pH-F" },
+                { label: "Temperature", metricType: "Temperature", sourceColumn: "Temp-F" },
+                { label: "Turbidity", metricType: "Turbidity", sourceColumn: "Turb-F" }
+            ]
+        },
+        {
+            name: "Pump Stations",
+            fields: [
+                { label: "Mt. Jefferson Meter", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" },
+                { label: "Pump Flow", metricType: "Flow", sourceColumn: "Pump Flow" },
+                { label: "Pressure", metricType: "Pressure", sourceColumn: "Pump Pressure" }
+            ]
+        }
+    ];
+
+    const values = {};
+
+    document.getElementById("entryDate").valueAsDate = new Date();
+
+    function buildTiles() {
+        const container = document.getElementById("siteTiles");
+        container.innerHTML = "";
+
+        sites.forEach(site => {
+            const div = document.createElement("div");
+            div.className = "site-tile";
+            div.id = `tile-${site.name}`;
+            div.innerText = site.name;
+            div.onclick = () => openSite(site.name);
+            container.appendChild(div);
+        });
+    }
+
+    function openSite(siteName) {
+        const container = document.getElementById("entryPanel");
+
+    container.innerHTML = `
+        <h2>${site.displayName}</h2>
+
+        <h3>Meter Readings</h3>
+        ${site.wells.map(well => `
+            <div class="entry-row">
+                <label>${well}</label>
+                <input
+                    type="number"
+                    step="0.01"
+                    data-location="${well}"
+                    data-metric="Meter Reading"
+                    placeholder="Meter reading" />
+            </div>
+        `).join("")}
+
+        <h3>Site Chemistry</h3>
+
+        <div class="entry-row">
+            <label>Chlorine</label>
+            <input
+                type="number"
+                step="0.01"
+                data-location="${site.siteName}"
+                data-metric="Chlorine"
+                placeholder="Chlorine" />
+        </div>
+
+        <div class="entry-row">
+            <label>Phosphate</label>
+            <input
+                type="number"
+                step="0.01"
+                data-location="${site.siteName}"
+                data-metric="Phosphate"
+                placeholder="Phosphate" />
+        </div>
+
+        <div class="entry-row">
+            <label>pH</label>
+            <input
+                type="number"
+                step="0.01"
+                data-location="${site.siteName}"
+                data-metric="pH"
+                placeholder="pH" />
+        </div>
+    `;
+}
+
+    function saveValue(location, metricType, sourceColumn, value) {
+        const key = `${location}|${metricType}|${sourceColumn}`;
+        values[key] = value;
+
+        markTileComplete(location);
+    }
+
+    function markTileComplete(location) {
+        const site = sites.find(x => x.name === location);
+
+        const complete = site.fields.every(field => {
+            const key = `${site.name}|${field.metricType}|${field.sourceColumn}`;
+            return values[key] !== undefined && values[key] !== "";
+        });
+
+        const tile = document.getElementById(`tile-${location}`);
+
+        if (complete) {
+            tile.classList.add("complete");
+        } else {
+            tile.classList.remove("complete");
+        }
+    }
+
+    async function submitReadings() {
+    const timestamp = document.getElementById("readingDate").value;
+
+    if (!timestamp) {
+        alert("Please select a reading date.");
+        return;
+    }
+
+    const inputs = document.querySelectorAll("#entryPanel input");
+
+    const readings = [];
+
+    inputs.forEach(input => {
+        if (input.value === "") return;
+
+        readings.push({
+            timestamp: timestamp,
+            location: input.dataset.location,
+            metricType: input.dataset.metric,
+            sourceColumn: input.dataset.location + " - " + input.dataset.metric,
+            value: parseFloat(input.value)
+        });
+    });
+
+    if (readings.length === 0) {
+        alert("Please enter at least one reading.");
+        return;
+    }
+
+    const response = await fetch("/api/scada/manual-entry", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(readings)
+    });
+
+    if (response.ok) {
+        alert("Readings saved.");
+    } else {
+        alert("Error saving readings.");
+    }
+}
+
+    buildTiles();
+</script>

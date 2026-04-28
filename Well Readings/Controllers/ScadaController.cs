@@ -72,6 +72,59 @@ namespace Well_Readings.Controllers
             });
         }
 
+        [HttpPost("daily-entry")]
+        public async Task<IActionResult> SaveDailyEntry([FromBody] DailyEntryRequest request)
+        {
+            if (request == null || request.Readings == null || !request.Readings.Any())
+                return BadRequest("No readings were submitted.");
+
+            var entryDate = request.EntryDate.Date;
+
+            var newPoints = request.Readings
+                .Where(x => x.Value.HasValue)
+                .Select(x => new ScadaHistoryPoint
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = entryDate,
+                    Location = x.Location,
+                    MetricType = x.MetricType,
+                    SourceColumn = x.SourceColumn,
+                    Value = x.Value
+                })
+                .ToList();
+
+            var locations = newPoints.Select(x => x.Location).Distinct().ToList();
+
+            var existing = await _context.ScadaHistoryPoints
+                .Where(x => x.Timestamp == entryDate && locations.Contains(x.Location))
+                .ToListAsync();
+
+            _context.ScadaHistoryPoints.RemoveRange(existing);
+            _context.ScadaHistoryPoints.AddRange(newPoints);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                saved = newPoints.Count,
+                date = entryDate
+            });
+        }
+
+        public class DailyEntryRequest
+        {
+            public DateTime EntryDate { get; set; }
+            public List<DailyReadingDto> Readings { get; set; } = new();
+        }
+
+        public class DailyReadingDto
+        {
+            public string Location { get; set; } = string.Empty;
+            public string MetricType { get; set; } = string.Empty;
+            public string SourceColumn { get; set; } = string.Empty;
+            public decimal? Value { get; set; }
+        }
+
         [HttpPost("import-excel")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> ImportExcel(IFormFile file)
@@ -146,7 +199,31 @@ namespace Well_Readings.Controllers
             });
         }
 
+        [HttpPost("manual-entry")]
+        public async Task<IActionResult> ManualEntry([FromBody] List<ScadaHistoryPoint> readings)
+        {
+            if (readings == null || readings.Count == 0)
+                return BadRequest("No readings were submitted.");
 
+            foreach (var reading in readings)
+            {
+                reading.Id = Guid.NewGuid();
+
+                if (reading.Timestamp == default)
+                    reading.Timestamp = DateTime.Today;
+
+                if (string.IsNullOrWhiteSpace(reading.SourceColumn))
+                    reading.SourceColumn = $"{reading.Location} - {reading.MetricType}";
+            }
+
+            _context.ScadaHistoryPoints.AddRange(readings);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                saved = readings.Count
+            });
+        }
 
         [HttpGet("report")]
         public async Task<IActionResult> GetReport(DateTime startDate, DateTime endDate)
