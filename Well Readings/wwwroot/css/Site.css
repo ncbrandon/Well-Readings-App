@@ -232,3 +232,66 @@
     width: 4px;
     background: #22c55e;
 }
+
+.app-header {
+    background: #111827;
+    padding: 16px 20px;
+    margin-bottom: 25px;
+    border-radius: 0 0 14px 14px;
+}
+
+.app-title {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 14px;
+}
+
+.desktop-nav {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+    .desktop-nav a {
+        background: #2563eb;
+        color: white;
+        text-decoration: none;
+        padding: 14px 24px;
+        border-radius: 10px;
+        font-weight: bold;
+        min-width: 120px;
+        text-align: center;
+    }
+
+        .desktop-nav a:hover {
+            background: #1d4ed8;
+        }
+
+.mobile-nav {
+    display: none;
+}
+
+    .mobile-nav select {
+        width: 100%;
+        padding: 14px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 10px;
+        border: 1px solid #374151;
+        color: #111827;
+    }
+
+@media (max-width: 700px) {
+    .desktop-nav {
+        display: none;
+    }
+
+    .mobile-nav {
+        display: block;
+    }
+
+    .app-title {
+        font-size: 20px;
+    }
+}

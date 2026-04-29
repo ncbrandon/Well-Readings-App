@@ -18,16 +18,12 @@ namespace Well_Readings.Data
         public DbSet<ScadaHistoryPoint> ScadaHistoryPoints { get; set; }
         public DbSet<MaintenancePumpInstall> MaintenancePumpInstalls { get; set; }
         public DbSet<Plant> Plants { get; set; }
-
-
         public DbSet<WellAlarm> WellAlarms => Set<WellAlarm>();
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // ---- Relationships ----
             modelBuilder.Entity<WellReading>()
                 .HasOne(w => w.DailyEntry)
                 .WithMany(d => d.WellReadings)
@@ -39,7 +35,6 @@ namespace Well_Readings.Data
                 .WithMany()
                 .HasForeignKey(w => w.WellId);
 
-            // ---- Well readings ----
             modelBuilder.Entity<WellReading>(entity =>
             {
                 entity.Property(e => e.MeterReading).HasPrecision(18, 0);
@@ -48,7 +43,6 @@ namespace Well_Readings.Data
                 entity.Property(e => e.Ph).HasPrecision(3, 1);
             });
 
-            // ---- Filtration plant ----
             modelBuilder.Entity<FiltrationPlantReading>(entity =>
             {
                 entity.HasKey(x => x.Id);
@@ -61,10 +55,12 @@ namespace Well_Readings.Data
                 entity.Property(x => x.Timestamp);
             });
 
-            // ---- SCADA history points ----
             modelBuilder.Entity<ScadaHistoryPoint>(entity =>
             {
                 entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Timestamp)
+                    .IsRequired();
 
                 entity.Property(x => x.Location)
                     .HasMaxLength(100)
@@ -82,7 +78,7 @@ namespace Well_Readings.Data
                     .HasPrecision(18, 3);
 
                 entity.HasIndex(x => new { x.Timestamp, x.Location, x.MetricType });
-
+            });
 
             modelBuilder.Entity<MaintenancePumpInstall>(entity =>
             {
@@ -103,9 +99,7 @@ namespace Well_Readings.Data
                     .IsRequired();
 
                 entity.HasIndex(x => new { x.SiteName, x.PumpType, x.InstalledDate });
-                });
             });
-
         }
     }
 }

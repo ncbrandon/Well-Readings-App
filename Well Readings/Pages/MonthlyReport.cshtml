@@ -1,178 +1,323 @@
 ﻿@page
 @model Well_Readings.Pages.MonthlyReportModel
 
-<h2 class="mb-3">Monthly SCADA Dashboard</h2>
+<h1>Monthly Reports</h1>
 
-<!-- FILTER BAR -->
-<form method="get" class="row g-2 mb-3">
+<section class="report-card">
+    <h2>Site Monthly Report</h2>
 
-    <div class="col-auto">
-        <input type="number" name="year" value="@Model.Year" class="form-control" placeholder="Year" />
+    <div class="filter-row">
+        <label>Site</label>
+        <select id="siteSelect">
+            <option>All Sites</option>
+            <option>Reeves Well Site</option>
+            <option>Park Well Site</option>
+            <option>Woods</option>
+            <option>Catawissa</option>
+            <option>New</option>
+            <option>Oakwood</option>
+            <option>Ray</option>
+            <option>Filter Plant</option>
+        </select>
+
+        <label>Beginning Date</label>
+        <input type="date" id="siteStartDate" />
+
+        <label>Ending Date</label>
+        <input type="date" id="siteEndDate" />
+
+        <button type="button" onclick="loadSiteReport()">Run Report</button>
     </div>
 
-    <div class="col-auto">
-        <input type="number" name="month" value="@Model.Month" class="form-control" placeholder="Month" />
+    <h3>Daily Results</h3>
+
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Date / Time</th>
+                <th>Site</th>
+                <th>Well / Filter</th>
+                <th>Gallons Pumped</th>
+                <th>Chlorine</th>
+                <th>Phosphate</th>
+                <th>pH</th>
+                <th>Temperature</th>
+            </tr>
+        </thead>
+        <tbody id="siteReportBody"></tbody>
+    </table>
+
+    <h3>Summary</h3>
+
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Site</th>
+                <th>Well / Filter</th>
+                <th>Days Pumped</th>
+                <th>Max Gallons Pumped</th>
+            </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+    </table>
+</section>
+
+<section class="report-card">
+    <h2>Meter Reading Report</h2>
+
+    <div class="filter-row">
+        <label>Beginning Date</label>
+        <input type="date" id="meterStartDate" />
+
+        <label>Ending Date</label>
+        <input type="date" id="meterEndDate" />
+
+        <button type="button" onclick="loadMeterTotalReport()">Run Total Report</button>
     </div>
 
-    <div class="col-auto">
-        <button class="btn btn-primary">Load</button>
+    <div class="total-box">
+        Total Gallons Pumped:
+        <span id="totalGallons">0</span>
     </div>
+</section>
 
-</form>
+<style>
+    .report-card {
+        background: #f3f4f6;
+        color: #111827;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+    }
 
-@if (Model.Rows == null || !Model.Rows.Any())
-{
-    <div class="alert alert-warning">
-        No data available for selected period.
-    </div>
-}
-else
-{
-    <!-- KPI ROW -->
-    <div class="row mb-3">
-
-        <div class="col-md-4">
-            <div class="card text-bg-primary shadow">
-                <div class="card-body">
-                    <h6>Total Sites</h6>
-                    <h3>@Model.AvailableSites.Count</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card text-bg-success shadow">
-                <div class="card-body">
-                    <h6>Total Gallons</h6>
-                    <h3>
-                        @Model.TotalGallonsPerSite.Values.Sum()
-                    </h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card text-bg-warning shadow">
-                <div class="card-body">
-                    <h6>Max Daily Site Output</h6>
-                    <h3>
-                        @Model.MaxDailyGallonsPerSite.Values.Max()
-                    </h3>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- SITE CARDS -->
-    <h4>Site Status</h4>
-
-    <div class="row mb-4">
-
-        @foreach (var site in Model.AvailableSites)
-        {
-            var total = Model.TotalGallonsPerSite[site];
-
-            <div class="col-md-3 mb-3">
-
-                <div class="card shadow border-0
-                            @(total > 50000 ? "bg-danger text-white"
-                                           : total > 20000 ? "bg-warning"
-                                           : "bg-success text-white")">
-
-            <div class="card-body">
-                <h6>@site</h6>
-                <h4>@total</h4>
-                <small>Gallons</small>
-            </div>
-
-                </div>
-
-            </div>
+        .report-card h2,
+        .report-card h3,
+        .report-card label {
+            color: #111827;
         }
 
-    </div>
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
 
-    <!-- CHART -->
-    <div class="card mb-4 shadow">
-        <div class="card-body">
-            <h5>Production Distribution</h5>
-            <canvas id="siteChart"></canvas>
-        </div>
-    </div>
-
-    <!-- DETAIL TABLE -->
-    <div class="card shadow">
-        <div class="card-header">
-            Well-Level Detail
-        </div>
-
-        <div class="card-body p-0">
-
-            <table class="table table-hover mb-0">
-
-                <thead class="table-dark">
-                    <tr>
-                        <th>Well</th>
-                        <th>Site</th>
-                        <th>Total</th>
-                        <th>Avg</th>
-                        <th>Days</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    @foreach (var row in Model.Rows)
-                    {
-                        <tr class="@(row.IsAnomaly ? "table-danger" : "")">
-
-                            <td>@row.WellName</td>
-                            <td>@row.Site</td>
-                            <td>@row.TotalProduction</td>
-                            <td>@row.AverageProduction</td>
-                            <td>@row.DaysReported</td>
-
-                            <td>
-                                @if (row.IsAnomaly)
-                                {
-                                    <span class="badge bg-danger">ALERT</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success">OK</span>
-                                }
-                            </td>
-
-                        </tr>
-                    }
-
-                </tbody>
-
-            </table>
-
-        </div>
-    </div>
-
-    <!-- CHART SCRIPT -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <script>
-        const ctx = document.getElementById('siteChart');
-
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.AvailableSites)),
-                datasets: [{
-                    label: 'Gallons by Site',
-                    data: @Html.Raw(Json.Serialize(
-                                            Model.AvailableSites.Select(s => Model.TotalGallonsPerSite[s])
-                                    )),
-                backgroundColor: 'rgba(54, 162, 235, 0.6)'
-            }]
+        .filter-row label {
+            font-weight: bold;
         }
-    });
+
+        .filter-row input,
+        .filter-row select {
+            padding: 8px;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #111827;
+            background: white;
+        }
+
+        .filter-row button {
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        color: #111827;
+        margin-bottom: 25px;
+    }
+
+        .report-table th,
+        .report-table td {
+            border: 1px solid #d1d5db;
+            padding: 9px;
+            text-align: left;
+        }
+
+        .report-table th {
+            background: #1f2937;
+            color: white;
+        }
+
+        .report-table tbody tr:nth-child(odd) {
+            background: #ffffff;
+        }
+
+        .report-table tbody tr:nth-child(even) {
+            background: #eff6ff;
+        }
+
+    .total-box {
+        background: white;
+        color: #111827;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 18px;
+        font-size: 22px;
+        font-weight: bold;
+    }
+
+    #totalGallons {
+        color: #047857;
+    }
+
+    @@media (max-width: 800px) {
+        .filter-row {
+            display: block;
+        }
+
+            .filter-row label,
+            .filter-row input,
+            .filter-row select,
+            .filter-row button {
+                display: block;
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+        .report-table {
+            font-size: 13px;
+        }
+    }
+</style>
+
+<script>
+    setDefaultDates();
+
+    function setDefaultDates() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        document.getElementById("siteStartDate").valueAsDate = firstDay;
+        document.getElementById("siteEndDate").valueAsDate = today;
+        document.getElementById("meterStartDate").valueAsDate = firstDay;
+        document.getElementById("meterEndDate").valueAsDate = today;
+    }
+
+    async function loadSiteReport() {
+        const site = document.getElementById("siteSelect").value;
+        const startDate = document.getElementById("siteStartDate").value;
+        const endDate = document.getElementById("siteEndDate").value;
+
+        if (!startDate || !endDate) {
+            alert("Please select a beginning and ending date.");
+            return;
+        }
+
+        const response = await fetch(`/api/scada/monthly-site-report?site=${encodeURIComponent(site)}&startDate=${startDate}&endDate=${endDate}`);
+
+        if (!response.ok) {
+            alert("Error loading monthly report.");
+            return;
+        }
+
+        const data = await response.json();
+
+        renderSiteRows(data.rows || []);
+        renderSummaryRows(data.summary || []);
+    }
+
+    function renderSiteRows(rows) {
+        const body = document.getElementById("siteReportBody");
+        body.innerHTML = "";
+
+        if (rows.length === 0) {
+            body.innerHTML = `<tr><td colspan="8">No results found.</td></tr>`;
+            return;
+        }
+
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${formatDateTime(row.date)}</td>
+                <td>${row.site}</td>
+                <td>${row.name}</td>
+                <td>${formatNumber(row.gallonsPumped)}</td>
+                <td>${formatValue(row.chlorine)}</td>
+                <td>${formatValue(row.phosphate)}</td>
+                <td>${formatValue(row.ph)}</td>
+                <td>${formatValue(row.temperature)}</td>
+            `;
+
+            body.appendChild(tr);
+        });
+    }
+
+    function renderSummaryRows(rows) {
+        const body = document.getElementById("summaryBody");
+        body.innerHTML = "";
+
+        if (rows.length === 0) {
+            body.innerHTML = `<tr><td colspan="4">No summary found.</td></tr>`;
+            return;
+        }
+
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${row.site}</td>
+                <td>${row.name}</td>
+                <td>${row.daysPumped}</td>
+                <td>${formatNumber(row.maxGallonsPumped)}</td>
+            `;
+
+            body.appendChild(tr);
+        });
+    }
+
+    async function loadMeterTotalReport() {
+        const startDate = document.getElementById("meterStartDate").value;
+        const endDate = document.getElementById("meterEndDate").value;
+
+        if (!startDate || !endDate) {
+            alert("Please select a beginning and ending date.");
+            return;
+        }
+
+        const response = await fetch(`/api/scada/meter-reading-total-report?startDate=${startDate}&endDate=${endDate}`);
+
+        if (!response.ok) {
+            alert("Error loading total meter report.");
+            return;
+        }
+
+        const data = await response.json();
+
+        document.getElementById("totalGallons").innerText =
+            formatNumber(data.totalGallonsPumped);
+    }
+
+    function formatDateTime(value) {
+        if (!value) return "";
+        return new Date(value).toLocaleString();
+    }
+    
+    function formatDate(value) {
+        if (!value) return "";
+        return new Date(value).toLocaleDateString();
+    }
+
+    function formatValue(value) {
+        if (value === null || value === undefined) return "";
+        return Number(value).toLocaleString(undefined, {
+            maximumFractionDigits: 3
+        });
+    }
+
+    function formatNumber(value) {
+        if (value === null || value === undefined) return "0";
+        return Number(value).toLocaleString(undefined, {
+            maximumFractionDigits: 0
+        });
+    }
 </script>
-}

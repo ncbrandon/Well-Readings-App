@@ -2,43 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>SCADA Water Dashboard</title>
-
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- SCADA STYLE SHEET -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Water Dashboard</title>
     <link rel="stylesheet" href="~/css/site.css" />
-
-    <!-- IMPORTANT: prevents Razor section crash -->
-    @RenderSection("Styles", required: false)
 </head>
 
 <body>
+    <header class="app-header">
+        <div class="app-title">💧 Water Dashboard</div>
 
-    <!-- TOP NAV BAR -->
-    <div class="topbar">
-        <div class="brand">💧 WATER SCADA</div>
-
-        <div class="nav">
-            <a href="/Dashboard">Plant</a>
-            <a href="/DailyLog">Daily Entries</a>
+        <nav class="desktop-nav">
+            <a href="/Scada">Home</a>
+            <a href="/ScadaEntry">Daily</a>
+            <a href="/Maintenance">Maintenance</a>
+            <a href="/DailyEntry">Log</a>
             <a href="/MonthlyReport">Reports</a>
-        </div>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div class="container">
-        <nav>
-            <a href="/Scada">SCADA</a> |
-            <a href="/Dashboard">Dashboard</a>
         </nav>
 
+        <div class="mobile-nav">
+            <select onchange="if (this.value) window.location.href = this.value;">
+                <option value="">Menu</option>
+                <option value="/Scada">Home</option>
+                <option value="/ScadaEntry">Daily</option>
+                <option value="/Maintenance">Maintenance</option>
+                <option value="/DailyEntry">Log</option>
+                <option value="/MonthlyReport">Reports</option>
+            </select>
+        </div>
+    </header>
+
+    <main class="container">
         @RenderBody()
-    </div>
+    </main>
 
-    <!-- IMPORTANT FIX: prevents your "Scripts section missing" crash -->
     @RenderSection("Scripts", required: false)
-
-
 </body>
 </html>
