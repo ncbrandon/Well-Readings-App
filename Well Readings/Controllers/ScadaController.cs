@@ -225,6 +225,94 @@ namespace Well_Readings.Controllers
             });
         }
 
+        [HttpGet("daily-entries")]
+        public async Task<IActionResult> GetDailyEntries()
+        {
+            var entries = await _context.ScadaHistoryPoints
+                .GroupBy(x => x.Timestamp)
+                .Select(g => new
+                {
+                    timestamp = g.Key,
+                    count = g.Count()
+                })
+                .OrderByDescending(x => x.timestamp)
+                .ToListAsync();
+
+            return Ok(entries);
+        }
+
+        [HttpGet("daily-entry")]
+        public async Task<IActionResult> GetDailyEntry(DateTime timestamp)
+        {
+            var entries = await _context.ScadaHistoryPoints
+                .Where(x => x.Timestamp == timestamp)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.Timestamp,
+                    x.Location,
+                    x.MetricType,
+                    x.SourceColumn,
+                    x.Value
+                })
+                .ToListAsync();
+
+            return Ok(entries);
+        }
+
+        [HttpPost("daily-entry/update")]
+        public async Task<IActionResult> UpdateDailyEntry([FromBody] DailyEntryUpdateRequest request)
+        {
+            if (request == null)
+                return BadRequest("No data was submitted.");
+
+            if (request.Timestamp == default)
+                return BadRequest("Timestamp is required.");
+
+            var existing = await _context.ScadaHistoryPoints
+                .Where(x => x.Timestamp == request.Timestamp)
+                .ToListAsync();
+
+            _context.ScadaHistoryPoints.RemoveRange(existing);
+
+            var newEntries = request.Readings
+                .Where(x => x.Value.HasValue)
+                .Select(x => new ScadaHistoryPoint
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = request.Timestamp,
+                    Location = x.Location,
+                    MetricType = x.MetricType,
+                    SourceColumn = x.SourceColumn,
+                    Value = x.Value
+                })
+                .ToList();
+
+            _context.ScadaHistoryPoints.AddRange(newEntries);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                updated = true,
+                saved = newEntries.Count
+            });
+        }
+
+        public class DailyEntryUpdateRequest
+        {
+            public DateTime Timestamp { get; set; }
+            public List<DailyEntryReadingDto> Readings { get; set; } = new();
+        }
+
+        public class DailyEntryReadingDto
+        {
+            public string Location { get; set; } = string.Empty;
+            public string MetricType { get; set; } = string.Empty;
+            public string SourceColumn { get; set; } = string.Empty;
+            public decimal? Value { get; set; }
+        }
+
         [HttpGet("report")]
         public async Task<IActionResult> GetReport(DateTime startDate, DateTime endDate)
         {

@@ -1,0 +1,265 @@
+﻿@page
+@model Well_Readings.Pages.MaintenanceModel
+
+<h1>Maintenance</h1>
+
+<div id="siteTiles" class="site-grid"></div>
+
+<div id="maintenancePanel" class="maintenance-panel" style="display:none;"></div>
+
+<div id="message"></div>
+
+<style>
+    .site-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .site-tile {
+        background: #1f2937;
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        border: 2px solid transparent;
+    }
+
+        .site-tile.need-chlorine {
+            background: #fde047;
+            color: #111827;
+        }
+
+        .site-tile.need-phosphate {
+            background: #93c5fd;
+            color: #111827;
+        }
+
+        .site-tile.need-both {
+            background: linear-gradient(to right, #fde047 0%, #fde047 50%, #93c5fd 50%, #93c5fd 100%);
+            color: #111827;
+        }
+
+    .maintenance-panel {
+        background: #f3f4f6;
+        color: #111827;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+
+        .maintenance-panel h2,
+        .maintenance-panel h3,
+        .maintenance-panel label {
+            color: #111827;
+        }
+
+    .check-row,
+    .date-row {
+        margin-bottom: 14px;
+        font-weight: bold;
+    }
+
+        .check-row input {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .date-row label {
+            display: inline-block;
+            width: 230px;
+        }
+
+        .date-row input {
+            padding: 8px;
+            color: #111827;
+            background: white;
+            border: 1px solid #374151;
+            border-radius: 5px;
+        }
+
+    .save-btn {
+        padding: 10px 20px;
+        font-size: 15px;
+        font-weight: bold;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 15px;
+    }
+
+    #message {
+        margin-top: 20px;
+        font-weight: bold;
+        color: #111827;
+    }
+</style>
+
+<script>
+    const sites = [
+        "Reeves Well Site",
+        "Park Well Site",
+        "Woods",
+        "Catawissa",
+        "New",
+        "Oakwood",
+        "Ray",
+        "Filter Plant",
+        "Pump Stations"
+    ];
+
+    const maintenanceState = {};
+
+    function buildTiles() {
+        const container = document.getElementById("siteTiles");
+        container.innerHTML = "";
+
+        sites.forEach(site => {
+            maintenanceState[site] = maintenanceState[site] || {
+                needChlorine: false,
+                needPhosphate: false,
+                needInjector: false,
+                needChemicalPump: false
+            };
+
+            const div = document.createElement("div");
+            div.className = "site-tile";
+            div.id = `tile-${site}`;
+            div.innerText = site;
+            div.onclick = () => openSite(site);
+
+            container.appendChild(div);
+            updateTileColor(site);
+        });
+    }
+
+    function openSite(site) {
+        const panel = document.getElementById("maintenancePanel");
+        const state = maintenanceState[site];
+
+        panel.style.display = "block";
+
+        panel.innerHTML = `
+            <h2>${site}</h2>
+
+            <h3>Supplies / Parts Needed</h3>
+
+            <div class="check-row">
+                <label>
+                    <input type="checkbox" ${state.needChlorine ? "checked" : ""}
+                        onchange="updateCheck('${site}', 'needChlorine', this.checked)" />
+                    Need Chlorine
+                </label>
+            </div>
+
+            <div class="check-row">
+                <label>
+                    <input type="checkbox" ${state.needPhosphate ? "checked" : ""}
+                        onchange="updateCheck('${site}', 'needPhosphate', this.checked)" />
+                    Need Phosphate
+                </label>
+            </div>
+
+            <div class="check-row">
+                <label>
+                    <input type="checkbox" ${state.needInjector ? "checked" : ""}
+                        onchange="updateCheck('${site}', 'needInjector', this.checked)" />
+                    Need Injector
+                </label>
+            </div>
+
+            <div class="check-row">
+                <label>
+                    <input type="checkbox" ${state.needChemicalPump ? "checked" : ""}
+                        onchange="updateCheck('${site}', 'needChemicalPump', this.checked)" />
+                    Need Chemical Pump
+                </label>
+            </div>
+
+            <h3>Pump Install Records</h3>
+
+            <div class="date-row">
+                <label>New Well Pump Installed:</label>
+                <input type="date" id="wellPumpDate-${safeId(site)}" />
+            </div>
+
+            <button type="button" class="save-btn" onclick="savePumpInstall('${site}', 'New Well Pump', 'wellPumpDate-${safeId(site)}')">
+                Save New Well Pump Install
+            </button>
+
+            <div class="date-row" style="margin-top:20px;">
+                <label>New Detention Pump Installed:</label>
+                <input type="date" id="detentionPumpDate-${safeId(site)}" />
+            </div>
+
+            <button type="button" class="save-btn" onclick="savePumpInstall('${site}', 'New Detention Pump', 'detentionPumpDate-${safeId(site)}')">
+                Save New Detention Pump Install
+            </button>
+        `;
+    }
+
+    function updateCheck(site, field, checked) {
+        maintenanceState[site][field] = checked;
+        updateTileColor(site);
+    }
+
+    function updateTileColor(site) {
+        const tile = document.getElementById(`tile-${site}`);
+        const state = maintenanceState[site];
+
+        if (!tile || !state) return;
+
+        tile.classList.remove("need-chlorine", "need-phosphate", "need-both");
+
+        if (state.needChlorine && state.needPhosphate) {
+            tile.classList.add("need-both");
+        } else if (state.needChlorine) {
+            tile.classList.add("need-chlorine");
+        } else if (state.needPhosphate) {
+            tile.classList.add("need-phosphate");
+        }
+    }
+
+    async function savePumpInstall(site, pumpType, inputId) {
+        const installedDate = document.getElementById(inputId).value;
+
+        if (!installedDate) {
+            alert("Please select an installed date.");
+            return;
+        }
+
+        const response = await fetch("/api/maintenance/pump-install", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                siteName: site,
+                pumpType: pumpType,
+                installedDate: installedDate
+            })
+        });
+
+        const message = document.getElementById("message");
+
+        if (response.ok) {
+            message.innerText = `${pumpType} saved for ${site}.`;
+            message.style.color = "#047857";
+        } else {
+            message.innerText = "Error saving pump install.";
+            message.style.color = "#b91c1c";
+        }
+    }
+
+    function safeId(value) {
+        return value.replaceAll(" ", "-").replaceAll(".", "").replaceAll("/", "-");
+    }
+
+    buildTiles();
+</script>

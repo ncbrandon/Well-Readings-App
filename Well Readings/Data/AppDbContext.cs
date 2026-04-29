@@ -16,7 +16,7 @@ namespace Well_Readings.Data
         public DbSet<Well> Wells { get; set; }
         public DbSet<WellAlarmConfig> WellAlarmConfigs { get; set; }
         public DbSet<ScadaHistoryPoint> ScadaHistoryPoints { get; set; }
-
+        public DbSet<MaintenancePumpInstall> MaintenancePumpInstalls { get; set; }
         public DbSet<Plant> Plants { get; set; }
 
 
@@ -82,6 +82,28 @@ namespace Well_Readings.Data
                     .HasPrecision(18, 3);
 
                 entity.HasIndex(x => new { x.Timestamp, x.Location, x.MetricType });
+
+
+            modelBuilder.Entity<MaintenancePumpInstall>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.SiteName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.PumpType)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.InstalledDate)
+                    .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => new { x.SiteName, x.PumpType, x.InstalledDate });
+                });
             });
 
         }

@@ -10,19 +10,21 @@
 
 <div id="siteTiles" class="site-grid"></div>
 
-<div id="entryPanel" class="entry-panel" style="display:none;">
-    <h2 id="siteTitle"></h2>
-    <div id="entryFields"></div>
-</div>
+<div id="entryPanel" class="entry-panel" style="display:none;"></div>
 
-<button type="button" onclick="submitReadings()">Submit Readings</button>
+<button type="button" class="submit-btn" onclick="submitReadings()">Submit Readings</button>
 
 <div id="message"></div>
 
 <style>
     .entry-header {
         margin-bottom: 20px;
+        color: #111827;
     }
+
+        .entry-header label {
+            font-weight: bold;
+        }
 
     .site-grid {
         display: grid;
@@ -42,31 +44,42 @@
         font-weight: bold;
     }
 
-    .site-tile.complete {
-        background: #047857;
-    }
+        .site-tile.complete {
+            background: #047857;
+        }
 
     .entry-panel {
         background: #f3f4f6;
+        color: #111827;
         padding: 20px;
         border-radius: 10px;
         margin-bottom: 25px;
     }
 
+        .entry-panel h2,
+        .entry-panel h3,
+        .entry-panel label {
+            color: #111827;
+        }
+
     .field-row {
         margin-bottom: 12px;
     }
 
-    .field-row label {
-        display: inline-block;
-        width: 180px;
-        font-weight: bold;
-    }
+        .field-row label {
+            display: inline-block;
+            width: 220px;
+            font-weight: bold;
+        }
 
-    .field-row input {
-        padding: 8px;
-        width: 160px;
-    }
+        .field-row input {
+            padding: 8px;
+            width: 160px;
+            color: #111827;
+            background-color: #ffffff;
+            border: 1px solid #374151;
+            border-radius: 5px;
+        }
 
     .submit-btn {
         padding: 12px 24px;
@@ -82,107 +95,143 @@
     #message {
         margin-top: 20px;
         font-weight: bold;
-    }
-    #entryPanel,
-    #entryPanel h2,
-    #entryPanel h3,
-    #entryPanel label,
-    #entryPanel input {
         color: #111827;
     }
 
-        #entryPanel input {
-            background-color: #ffffff;
-            border: 1px solid #374151;
-        }
+    .entry-group {
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
 
+    .entry-group h3 {
+        color: #111827;
+        border-bottom: 2px solid #047857;
+        padding-bottom: 6px;
+        margin-bottom: 12px;
+    }
 </style>
 
 <script>
     const sites = [
-    {
-        siteName: "Reeves Well Site",
-        displayName: "Reeves Well",
-        wells: [
-            "Reeves Well A",
-            "Reeves Well B"
-        ],
-        chemistry: true
-    },
-    {
-        siteName: "Park Well Site",
-        displayName: "Park Well",
-        wells: [
-            "Park Well",
-            "Park Well A",
-            "Park Well B"
-        ],
-        chemistry: true
-    }
-        ];
+        {
+            name: "Reeves Well Site",
+            displayName: "Reeves Well",
+            fields: [
+                { label: "Reeves Well A Meter", location: "Reeves Well A", metricType: "Meter Reading", sourceColumn: "Reeves Well A" },
+                { label: "Reeves Well B Meter", location: "Reeves Well B", metricType: "Meter Reading", sourceColumn: "Reeves Well B" },
+                { label: "Chlorine", location: "Reeves Well Site", metricType: "Chlorine", sourceColumn: "Cl-R" },
+                { label: "Phosphate", location: "Reeves Well Site", metricType: "Phosphate", sourceColumn: "PO4-R" },
+                { label: "pH", location: "Reeves Well Site", metricType: "pH", sourceColumn: "pH-R" }
+            ]
+        },
+        {
+            name: "Park Well Site",
+            displayName: "Park Well",
+            fields: [
+                { label: "Park Well Meter", location: "Park Well", metricType: "Meter Reading", sourceColumn: "Park Well" },
+                { label: "Park Well A Meter", location: "Park Well A", metricType: "Meter Reading", sourceColumn: "Park Well A" },
+                { label: "Park Well B Meter", location: "Park Well B", metricType: "Meter Reading", sourceColumn: "Park Well B" },
+                { label: "Chlorine", location: "Park Well Site", metricType: "Chlorine", sourceColumn: "Cl-P" },
+                { label: "Phosphate", location: "Park Well Site", metricType: "Phosphate", sourceColumn: "PO4-P" },
+                { label: "pH", location: "Park Well Site", metricType: "pH", sourceColumn: "pH-P" }
+            ]
+        },
         {
             name: "Woods",
+            displayName: "Woods",
             fields: [
-                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Woods" },
-                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-W" },
-                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-W" },
-                { label: "pH", metricType: "pH", sourceColumn: "pH-W" }
+                { label: "Meter Reading", location: "Woods", metricType: "Meter Reading", sourceColumn: "Woods" },
+                { label: "Chlorine", location: "Woods", metricType: "Chlorine", sourceColumn: "Cl-W" },
+                { label: "Phosphate", location: "Woods", metricType: "Phosphate", sourceColumn: "PO4-W" },
+                { label: "pH", location: "Woods", metricType: "pH", sourceColumn: "pH-W" }
             ]
         },
         {
             name: "Catawissa",
+            displayName: "Catawissa",
             fields: [
-                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Catawissa" },
-                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-C" },
-                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-C" },
-                { label: "pH", metricType: "pH", sourceColumn: "pH-C" }
+                { label: "Meter Reading", location: "Catawissa", metricType: "Meter Reading", sourceColumn: "Catawissa" },
+                { label: "Chlorine", location: "Catawissa", metricType: "Chlorine", sourceColumn: "Cl-C" },
+                { label: "Phosphate", location: "Catawissa", metricType: "Phosphate", sourceColumn: "PO4-C" },
+                { label: "pH", location: "Catawissa", metricType: "pH", sourceColumn: "pH-C" }
             ]
         },
         {
             name: "New",
+            displayName: "New",
             fields: [
-                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "New" },
-                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-N" },
-                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-N" },
-                { label: "pH", metricType: "pH", sourceColumn: "pH-N" }
+                { label: "Meter Reading", location: "New", metricType: "Meter Reading", sourceColumn: "New" },
+                { label: "Chlorine", location: "New", metricType: "Chlorine", sourceColumn: "Cl-N" },
+                { label: "Phosphate", location: "New", metricType: "Phosphate", sourceColumn: "PO4-N" },
+                { label: "pH", location: "New", metricType: "pH", sourceColumn: "pH-N" }
             ]
         },
         {
             name: "Oakwood",
+            displayName: "Oakwood",
             fields: [
-                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Oakwood" },
-                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-O" },
-                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-O" },
-                { label: "pH", metricType: "pH", sourceColumn: "pH-O" }
+                { label: "Meter Reading", location: "Oakwood", metricType: "Meter Reading", sourceColumn: "Oakwood" },
+                { label: "Chlorine", location: "Oakwood", metricType: "Chlorine", sourceColumn: "Cl-O" },
+                { label: "Phosphate", location: "Oakwood", metricType: "Phosphate", sourceColumn: "PO4-O" },
+                { label: "pH", location: "Oakwood", metricType: "pH", sourceColumn: "pH-O" }
             ]
         },
         {
             name: "Ray",
+            displayName: "Ray",
             fields: [
-                { label: "Meter Reading", metricType: "Meter Reading", sourceColumn: "Ray" },
-                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-Ray" },
-                { label: "Phosphate", metricType: "Phosphate", sourceColumn: "PO4-Ray" },
-                { label: "pH", metricType: "pH", sourceColumn: "pH-Ray" }
+                { label: "Meter Reading", location: "Ray", metricType: "Meter Reading", sourceColumn: "Ray" },
+                { label: "Chlorine", location: "Ray", metricType: "Chlorine", sourceColumn: "Cl-Ray" },
+                { label: "Phosphate", location: "Ray", metricType: "Phosphate", sourceColumn: "PO4-Ray" },
+                { label: "pH", location: "Ray", metricType: "pH", sourceColumn: "pH-Ray" }
             ]
         },
         {
-            name: "Filter Plant",
+    name: "Filter Plant",
+    displayName: "Filter Plant",
+    groups: [
+        {
+            groupName: "Filter 1",
             fields: [
-                { label: "Feed Flow", metricType: "Feed Flow", sourceColumn: "Feed Flow" },
-                { label: "Chlorine", metricType: "Chlorine", sourceColumn: "Cl-F" },
-                { label: "pH", metricType: "pH", sourceColumn: "pH-F" },
-                { label: "Temperature", metricType: "Temperature", sourceColumn: "Temp-F" },
-                { label: "Turbidity", metricType: "Turbidity", sourceColumn: "Turb-F" }
+                { label: "Feed Pressure", location: "Filter 1", metricType: "Feed Pressure", sourceColumn: "Filter 1 Feed Pressure" },
+                { label: "Feed Flow", location: "Filter 1", metricType: "Feed Flow", sourceColumn: "Filter 1 Feed Flow" },
+                { label: "Filtrate Pressure", location: "Filter 1", metricType: "Filtrate Pressure", sourceColumn: "Filter 1 Filtrate Pressure" },
+                { label: "Filtrate Flow", location: "Filter 1", metricType: "Filtrate Flow", sourceColumn: "Filter 1 Filtrate Flow" },
+                { label: "TMP", location: "Filter 1", metricType: "TMP", sourceColumn: "Filter 1 TMP" },
+                { label: "Total Filter Run Time", location: "Filter 1", metricType: "Total Filter Run Time", sourceColumn: "Filter 1 Total Filter Run Time" },
+                { label: "Total Filtration Flow Yesterday", location: "Filter 1", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 1 Total Filtration Flow Yesterday" },
+                { label: "Pressure Decay", location: "Filter 1", metricType: "Pressure Decay", sourceColumn: "Filter 1 Pressure Decay" }
             ]
         },
         {
-            name: "Pump Stations",
+            groupName: "Filter 2",
             fields: [
-                { label: "Mt. Jefferson Meter", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" },
-                { label: "Pump Flow", metricType: "Flow", sourceColumn: "Pump Flow" },
-                { label: "Pressure", metricType: "Pressure", sourceColumn: "Pump Pressure" }
+                { label: "Feed Pressure", location: "Filter 2", metricType: "Feed Pressure", sourceColumn: "Filter 2 Feed Pressure" },
+                { label: "Feed Flow", location: "Filter 2", metricType: "Feed Flow", sourceColumn: "Filter 2 Feed Flow" },
+                { label: "Filtrate Pressure", location: "Filter 2", metricType: "Filtrate Pressure", sourceColumn: "Filter 2 Filtrate Pressure" },
+                { label: "Filtrate Flow", location: "Filter 2", metricType: "Filtrate Flow", sourceColumn: "Filter 2 Filtrate Flow" },
+                { label: "TMP", location: "Filter 2", metricType: "TMP", sourceColumn: "Filter 2 TMP" },
+                { label: "Total Filter Run Time", location: "Filter 2", metricType: "Total Filter Run Time", sourceColumn: "Filter 2 Total Filter Run Time" },
+                { label: "Total Filtration Flow Yesterday", location: "Filter 2", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 2 Total Filtration Flow Yesterday" },
+                { label: "Pressure Decay", location: "Filter 2", metricType: "Pressure Decay", sourceColumn: "Filter 2 Pressure Decay" }
+            ]
+        },
+        {
+            groupName: "Plant Readings",
+            fields: [
+                { label: "Meter Reading", location: "Filter Plant", metricType: "Meter Reading", sourceColumn: "Filter Plant" },
+                { label: "Chlorine", location: "Filter Plant", metricType: "Chlorine", sourceColumn: "Cl-F" },
+                { label: "Phosphate", location: "Filter Plant", metricType: "Phosphate", sourceColumn: "PO4-F" },
+                { label: "pH", location: "Filter Plant", metricType: "pH", sourceColumn: "pH-F" },
+                { label: "Temperature", location: "Filter Plant", metricType: "Temperature", sourceColumn: "Temp-F" },
+                { label: "Mt. Jefferson Meter", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" }
             ]
         }
+    ]
+}
     ];
 
     const values = {};
@@ -197,132 +246,141 @@
             const div = document.createElement("div");
             div.className = "site-tile";
             div.id = `tile-${site.name}`;
-            div.innerText = site.name;
+            div.innerText = site.displayName;
             div.onclick = () => openSite(site.name);
             container.appendChild(div);
         });
     }
 
     function openSite(siteName) {
-        const container = document.getElementById("entryPanel");
+    const site = sites.find(x => x.name === siteName);
+    const panel = document.getElementById("entryPanel");
 
-    container.innerHTML = `
+    if (!site) return;
+
+    panel.style.display = "block";
+
+    const groups = site.groups ?? [
+        {
+            groupName: site.displayName,
+            fields: site.fields
+        }
+    ];
+
+    panel.innerHTML = `
         <h2>${site.displayName}</h2>
 
-        <h3>Meter Readings</h3>
-        ${site.wells.map(well => `
-            <div class="entry-row">
-                <label>${well}</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    data-location="${well}"
-                    data-metric="Meter Reading"
-                    placeholder="Meter reading" />
+        ${groups.map(group => `
+            <div class="entry-group">
+                <h3>${group.groupName}</h3>
+
+                ${group.fields.map(field => {
+                    const key = `${field.location}|${field.metricType}|${field.sourceColumn}`;
+                    const savedValue = values[key] ?? "";
+
+                    return `
+                        <div class="field-row">
+                            <label>${field.label}</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value="${savedValue}"
+                                data-site="${site.name}"
+                                data-location="${field.location}"
+                                data-metric="${field.metricType}"
+                                data-source="${field.sourceColumn}"
+                                oninput="saveValueFromInput(this)" />
+                        </div>
+                    `;
+                }).join("")}
             </div>
         `).join("")}
-
-        <h3>Site Chemistry</h3>
-
-        <div class="entry-row">
-            <label>Chlorine</label>
-            <input
-                type="number"
-                step="0.01"
-                data-location="${site.siteName}"
-                data-metric="Chlorine"
-                placeholder="Chlorine" />
-        </div>
-
-        <div class="entry-row">
-            <label>Phosphate</label>
-            <input
-                type="number"
-                step="0.01"
-                data-location="${site.siteName}"
-                data-metric="Phosphate"
-                placeholder="Phosphate" />
-        </div>
-
-        <div class="entry-row">
-            <label>pH</label>
-            <input
-                type="number"
-                step="0.01"
-                data-location="${site.siteName}"
-                data-metric="pH"
-                placeholder="pH" />
-        </div>
     `;
 }
 
-    function saveValue(location, metricType, sourceColumn, value) {
-        const key = `${location}|${metricType}|${sourceColumn}`;
-        values[key] = value;
+    function saveValueFromInput(input) {
+        const key = `${input.dataset.location}|${input.dataset.metric}|${input.dataset.source}`;
+        values[key] = input.value;
 
-        markTileComplete(location);
+        markTileComplete(input.dataset.site);
     }
 
-    function markTileComplete(location) {
-        const site = sites.find(x => x.name === location);
+    function markTileComplete(siteName) {
+    const site = sites.find(x => x.name === siteName);
+    const tile = document.getElementById(`tile-${siteName}`);
 
-        const complete = site.fields.every(field => {
-            const key = `${site.name}|${field.metricType}|${field.sourceColumn}`;
-            return values[key] !== undefined && values[key] !== "";
-        });
+    if (!site || !tile) return;
 
-        const tile = document.getElementById(`tile-${location}`);
-
-        if (complete) {
-            tile.classList.add("complete");
-        } else {
-            tile.classList.remove("complete");
+    const groups = site.groups ?? [
+        {
+            groupName: site.displayName,
+            fields: site.fields
         }
-    }
+    ];
 
-    async function submitReadings() {
-    const timestamp = document.getElementById("readingDate").value;
+    const allFields = groups.flatMap(group => group.fields);
 
-    if (!timestamp) {
-        alert("Please select a reading date.");
-        return;
-    }
-
-    const inputs = document.querySelectorAll("#entryPanel input");
-
-    const readings = [];
-
-    inputs.forEach(input => {
-        if (input.value === "") return;
-
-        readings.push({
-            timestamp: timestamp,
-            location: input.dataset.location,
-            metricType: input.dataset.metric,
-            sourceColumn: input.dataset.location + " - " + input.dataset.metric,
-            value: parseFloat(input.value)
-        });
+    const complete = allFields.every(field => {
+        const key = `${field.location}|${field.metricType}|${field.sourceColumn}`;
+        return values[key] !== undefined && values[key] !== "";
     });
 
-    if (readings.length === 0) {
-        alert("Please enter at least one reading.");
-        return;
-    }
-
-    const response = await fetch("/api/scada/manual-entry", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(readings)
-    });
-
-    if (response.ok) {
-        alert("Readings saved.");
+    if (complete) {
+        tile.classList.add("complete");
     } else {
-        alert("Error saving readings.");
+        tile.classList.remove("complete");
     }
 }
+
+    async function submitReadings() {
+        const timestamp = document.getElementById("entryDate").value;
+
+        if (!timestamp) {
+            alert("Please select a reading date.");
+            return;
+        }
+
+        const readings = [];
+
+        Object.keys(values).forEach(key => {
+            const value = values[key];
+
+            if (value === "") return;
+
+            const parts = key.split("|");
+
+            readings.push({
+                timestamp: timestamp,
+                location: parts[0],
+                metricType: parts[1],
+                sourceColumn: parts[2],
+                value: parseFloat(value)
+            });
+        });
+
+        if (readings.length === 0) {
+            alert("Please enter at least one reading.");
+            return;
+        }
+
+        const response = await fetch("/api/scada/manual-entry", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(readings)
+        });
+
+        const message = document.getElementById("message");
+
+        if (response.ok) {
+            message.innerText = "Readings saved successfully.";
+            message.style.color = "#047857";
+        } else {
+            message.innerText = "Error saving readings.";
+            message.style.color = "#b91c1c";
+        }
+    }
 
     buildTiles();
 </script>

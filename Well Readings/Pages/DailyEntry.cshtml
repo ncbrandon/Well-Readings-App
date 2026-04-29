@@ -1,190 +1,75 @@
 ﻿@page
-@model Well_Readings.Pages.DailyEntryModel
+@model Well_Readings.Pages.DailyEntriesModel
 
-<h2 class="mb-3">Daily Entry Details</h2>
+<h1>Daily Entries</h1>
 
-@if (Model.Entry == null)
-{
-    <div class="alert alert-warning">
-        No entry found.
-    </div>
-}
-else
-{
-    <!-- HEADER -->
-    <div class="card mb-3">
-        <div class="card-body">
+<table class="entry-table">
+    <thead>
+        <tr>
+            <th>Date / Time</th>
+            <th>Number of Readings</th>
+        </tr>
+    </thead>
+    <tbody id="entriesBody"></tbody>
+</table>
 
-            <h4>
-                @Model.Entry.EntryDate.ToString("yyyy-MM-dd")
-                <small class="text-muted">
-                    @Model.Entry.EntryTime.ToString("HH:mm")
-                </small>
-            </h4>
+<style>
+    .entry-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        color: #111827;
+    }
 
-        </div>
-    </div>
+        .entry-table th,
+        .entry-table td {
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            text-align: left;
+        }
 
-    <!-- KPI ROW -->
-    <div class="row mb-3">
+        .entry-table th {
+            background: #1f2937;
+            color: white;
+        }
 
-        <div class="col-md-4">
-            <div class="card text-bg-primary">
-                <div class="card-body">
-                    <h6>Total Wells</h6>
-                    <h3>@Model.Entry.Wells.Count</h3>
-                </div>
-            </div>
-        </div>
+        .entry-table a {
+            color: #2563eb;
+            font-weight: bold;
+            text-decoration: none;
+        }
 
-        <div class="col-md-4">
-            <div class="card text-bg-success">
-                <div class="card-body">
-                    <h6>Total Gallons</h6>
-                    <h3>@Model.Entry.TotalGallons</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card text-bg-warning">
-                <div class="card-body">
-                    <h6>Max Reading</h6>
-                    <h3>@Model.Entry.MaxGallons</h3>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- TABLE -->
-    <div class="card">
-        <div class="card-header">
-            Well Readings
-        </div>
-
-        <div class="card-body p-0">
-
-            <table class="table table-striped mb-0">
-
-                <thead>
-                    <tr>
-                        <th>Well</th>
-                        <th>Reading</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var w in Model.Entry.Wells)
-                    {
-                        <tr onclick="openEdit('@w.WellName', @w.Gallons)" style="cursor:pointer;">
-
-                            <td>@w.WellName</td>
-                            <td>@w.Gallons</td>
-                        </tr>
-                    }
-                </tbody>
-
-            </table>
-
-        </div>
-    </div>
-
-    <hr />
-
-    <h4>Well Distribution</h4>
-
-    <canvas id="wellChart" height="100"></canvas>
-
-    <script>
-        const ctx = document.getElementById('wellChart');
-
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.Entry.Wells.Select(w => w.WellName))),
-                datasets: [{
-                    label: 'Gallons',
-                    data: @Html.Raw(Json.Serialize(Model.Entry.Wells.Select(w => w.Gallons))),
-                    borderWidth: 1
-                }]
+            .entry-table a:hover {
+                text-decoration: underline;
             }
+</style>
+
+<script>
+    async function loadEntries() {
+        const response = await fetch("/api/scada/daily-entries");
+        const entries = await response.json();
+
+        const body = document.getElementById("entriesBody");
+        body.innerHTML = "";
+
+        entries.forEach(entry => {
+            const timestamp = entry.timestamp;
+            const displayDate = new Date(timestamp).toLocaleString();
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>
+                    <a href="/DailyEntryEdit?timestamp=${encodeURIComponent(timestamp)}">
+                        ${displayDate}
+                    </a>
+                </td>
+                <td>${entry.count}</td>
+            `;
+
+            body.appendChild(row);
         });
-    </script>
+    }
 
-
-    <!-- ACTIONS -->
-    <div class="mt-3 d-flex gap-2">
-
-        <a asp-page="/DailyLog" class="btn btn-secondary">
-            Back
-        </a>
-
-        <a asp-page="/EditDailyEntry"
-           asp-route-id="@Model.Entry.Id"
-           class="btn btn-primary">
-            Edit
-        </a>
-
-        <form method="post"
-              asp-page-handler="Delete"
-              asp-route-id="@Model.Entry.Id"
-              onsubmit="return confirm('Delete this entry?');">
-
-            <button class="btn btn-danger">
-                Delete
-            </button>
-
-        </form>
-
-    </div>
-    <a class="btn btn-outline-dark" href="javascript:window.print()">
-        Print Report
-    </a>
-    <div class="modal fade" id="editModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Reading</h5>
-                </div>
-
-                <div class="modal-body">
-
-                    <input type="hidden" id="wellId" />
-
-                    <div class="mb-3">
-                        <label>Well</label>
-                        <input id="wellName" class="form-control" />
-                    </div>
-
-                    <div class="mb-3">
-                        <label>Gallons</label>
-                        <input id="gallons" type="number" class="form-control" />
-                    </div>
-
-                </div>
-
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-primary" onclick="saveEdit()">Save</button>
-                </div>
-
-            </div>
-        </div>
-    </div>
-    <script>
-        function openEdit(name, gallons) {
-            document.getElementById("wellName").value = name;
-            document.getElementById("gallons").value = gallons;
-
-            var modal = new bootstrap.Modal(document.getElementById('editModal'));
-            modal.show();
-        }
-
-        function saveEdit() {
-            alert("Hook this to API later (PUT endpoint)");
-        }
-    </script>
-
-}
+    loadEntries();
+</script>
