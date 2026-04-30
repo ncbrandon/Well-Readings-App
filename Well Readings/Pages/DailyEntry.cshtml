@@ -1,11 +1,16 @@
 ﻿@page "/DailyEntry"
 @model Well_Readings.Pages.DailyEntriesModel
 
-<h1>Daily Entries</h1>
+<h1>Daily Entry Log</h1>
+
+<button type="button" class="delete-btn" onclick="deleteSelectedEntries()">
+    Delete Selected
+</button>
 
 <table class="entry-table">
     <thead>
         <tr>
+            <th>Select</th>
             <th>Date / Time</th>
             <th>Number of Readings</th>
         </tr>
@@ -13,7 +18,20 @@
     <tbody id="entriesBody"></tbody>
 </table>
 
+<div id="message"></div>
+
 <style>
+    .delete-btn {
+        background: #dc2626;
+        color: white;
+        padding: 10px 18px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-bottom: 15px;
+    }
+
     .entry-table {
         width: 100%;
         border-collapse: collapse;
@@ -33,15 +51,20 @@
             color: white;
         }
 
+        .entry-table tbody tr:nth-child(even) {
+            background: #eff6ff;
+        }
+
         .entry-table a {
             color: #2563eb;
             font-weight: bold;
             text-decoration: none;
         }
 
-            .entry-table a:hover {
-                text-decoration: underline;
-            }
+    #message {
+        margin-top: 15px;
+        font-weight: bold;
+    }
 </style>
 
 <script>
@@ -53,15 +76,16 @@
         body.innerHTML = "";
 
         entries.forEach(entry => {
-            const timestamp = entry.timestamp;
-            const displayDate = new Date(timestamp).toLocaleString();
-
             const row = document.createElement("tr");
+            const dateOnly = entry.date || entry.timestamp;
 
             row.innerHTML = `
                 <td>
-                    <a href="/DailyEntryEdit?timestamp=${encodeURIComponent(timestamp)}">
-                        ${displayDate}
+                    <input type="checkbox" class="entry-check" value="${dateOnly}" />
+                </td>
+                <td>
+                    <a href="/DailyEntryEdit?timestamp=${encodeURIComponent(entry.timestamp)}">
+                        ${new Date(entry.timestamp).toLocaleString()}
                     </a>
                 </td>
                 <td>${entry.count}</td>
@@ -69,6 +93,40 @@
 
             body.appendChild(row);
         });
+    }
+
+    async function deleteSelectedEntries() {
+        const checked = Array.from(document.querySelectorAll(".entry-check:checked"));
+
+        if (checked.length === 0) {
+            alert("Select at least one entry to delete.");
+            return;
+        }
+
+        if (!confirm("Delete the selected daily entries?")) {
+            return;
+        }
+
+        const dates = checked.map(x => x.value);
+
+        const response = await fetch("/api/scada/daily-entry/delete", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ dates: dates })
+        });
+
+        const message = document.getElementById("message");
+
+        if (response.ok) {
+            message.innerText = "Selected entries deleted.";
+            message.style.color = "#047857";
+            loadEntries();
+        } else {
+            message.innerText = "Error deleting entries.";
+            message.style.color = "#b91c1c";
+        }
     }
 
     loadEntries();

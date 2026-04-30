@@ -19,6 +19,7 @@ namespace Well_Readings.Data
         public DbSet<MaintenancePumpInstall> MaintenancePumpInstalls { get; set; }
         public DbSet<Plant> Plants { get; set; }
         public DbSet<WellAlarm> WellAlarms => Set<WellAlarm>();
+        public DbSet<MaintenanceSiteStatus> MaintenanceSiteStatuses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -99,6 +100,21 @@ namespace Well_Readings.Data
                     .IsRequired();
 
                 entity.HasIndex(x => new { x.SiteName, x.PumpType, x.InstalledDate });
+            });
+
+            modelBuilder.Entity<MaintenanceSiteStatus>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.SiteName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.IsOn)
+                    .IsRequired();
+
+                entity.Property(x => x.UpdatedAt)
+                    .IsRequired();
             });
         }
     }

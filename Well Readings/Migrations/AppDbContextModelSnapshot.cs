@@ -123,6 +123,28 @@ namespace Well_Readings.Migrations
                     b.ToTable("MaintenancePumpInstalls");
                 });
 
+            modelBuilder.Entity("Well_Readings.Models.MaintenanceSiteStatus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsOn")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SiteName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MaintenanceSiteStatuses");
+                });
+
             modelBuilder.Entity("Well_Readings.Models.Plant", b =>
                 {
                     b.Property<Guid>("Id")

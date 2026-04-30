@@ -22,8 +22,16 @@ namespace Well_Readings.Controllers
         {
             var meterColumns = new[]
             {
-                "Reeves", "Reeves A", "Park", "Park A", "Park B",
-                "Woods", "Catawissa", "New", "Oakwood", "Ray"
+                "Reeves Well",
+                "Reeves Well A",
+                "Park Well",
+                "Park Well A",
+                "Park Well B",
+                "Woods",
+                "Catawissa",
+                "New",
+                "Oakwood",
+                "Ray"
             };
 
             var wells = new List<object>();
@@ -50,79 +58,16 @@ namespace Well_Readings.Controllers
                 });
             }
 
-            var plantFlow = await GetLatestValue("Filter Plant", "Feed Flow");
-            var plantPh = await GetLatestValue("Filter Plant", "pH");
-            var plantChlorine = await GetLatestValue("Filter Plant", "Chlorine");
-            var plantTemp = await GetLatestValue("Filter Plant", "Temperature");
-            var plantTurbidity = await GetLatestValue("Filter Plant", "Turbidity");
-
             var plant = new
             {
-                flowRate = plantFlow,
-                turbidity = plantTurbidity,
-                chlorine = plantChlorine,
-                ph = plantPh,
-                temperature = plantTemp
+                flowRate = await GetLatestValue("Filter Plant", "Feed Flow"),
+                turbidity = await GetLatestValue("Filter Plant", "Turbidity"),
+                chlorine = await GetLatestValue("Filter Plant", "Chlorine"),
+                ph = await GetLatestValue("Filter Plant", "pH"),
+                temperature = await GetLatestValue("Filter Plant", "Temperature")
             };
 
-            return Ok(new
-            {
-                wells,
-                plant
-            });
-        }
-
-        [HttpPost("daily-entry")]
-        public async Task<IActionResult> SaveDailyEntry([FromBody] DailyEntryRequest request)
-        {
-            if (request == null || request.Readings == null || !request.Readings.Any())
-                return BadRequest("No readings were submitted.");
-
-            var entryDate = request.EntryDate.Date;
-
-            var newPoints = request.Readings
-                .Where(x => x.Value.HasValue)
-                .Select(x => new ScadaHistoryPoint
-                {
-                    Id = Guid.NewGuid(),
-                    Timestamp = entryDate,
-                    Location = x.Location,
-                    MetricType = x.MetricType,
-                    SourceColumn = x.SourceColumn,
-                    Value = x.Value
-                })
-                .ToList();
-
-            var locations = newPoints.Select(x => x.Location).Distinct().ToList();
-
-            var existing = await _context.ScadaHistoryPoints
-                .Where(x => x.Timestamp == entryDate && locations.Contains(x.Location))
-                .ToListAsync();
-
-            _context.ScadaHistoryPoints.RemoveRange(existing);
-            _context.ScadaHistoryPoints.AddRange(newPoints);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                saved = newPoints.Count,
-                date = entryDate
-            });
-        }
-
-        public class DailyEntryRequest
-        {
-            public DateTime EntryDate { get; set; }
-            public List<DailyReadingDto> Readings { get; set; } = new();
-        }
-
-        public class DailyReadingDto
-        {
-            public string Location { get; set; } = string.Empty;
-            public string MetricType { get; set; } = string.Empty;
-            public string SourceColumn { get; set; } = string.Empty;
-            public decimal? Value { get; set; }
+            return Ok(new { wells, plant });
         }
 
         [HttpPost("import-excel")]
@@ -210,38 +155,15 @@ namespace Well_Readings.Controllers
             if (submittedTime == default)
                 submittedTime = DateTime.Now;
 
-            var meterOrder = new List<string>
-    {
-        "Reeves Well",
-        "Reeves Well A",
-        "Park Well",
-        "Park Well A",
-        "Park Well B",
-        "Woods",
-        "Catawissa",
-        "New",
-        "Oakwood",
-        "Ray",
-        "Filter Plant",
-        "Mt. Jefferson",
-        "Filter 1",
-        "Filter 2"
-    };
+            var targetDate = submittedTime.Date;
 
-            var submittedMeters = readings
-                .Where(x => x.MetricType == "Meter Reading" || x.MetricType == "Total Filtration Flow Yesterday")
-                .OrderBy(x =>
-                {
-                    var index = meterOrder.IndexOf(x.Location);
-                    return index == -1 ? 999 : index;
-                })
-                .ToList();
+            var existingForDate = await _context.ScadaHistoryPoints
+                .Where(x => x.Timestamp.Date == targetDate)
+                .ToListAsync();
 
-            for (int i = 0; i < submittedMeters.Count; i++)
-            {
-                var minutesBack = (submittedMeters.Count - 1 - i) * 10;
-                submittedMeters[i].Timestamp = submittedTime.AddMinutes(-minutesBack);
-            }
+            _context.ScadaHistoryPoints.RemoveRange(existingForDate);
+
+            ApplyMeterTimestampSpacing(readings, submittedTime);
 
             foreach (var reading in readings)
             {
@@ -259,22 +181,46 @@ namespace Well_Readings.Controllers
 
             return Ok(new
             {
-                saved = readings.Count
+                saved = readings.Count,
+                overwrittenDate = targetDate
             });
         }
+
+        [HttpGet("entry-by-date")]
+        public async Task<IActionResult> GetEntryByDate(DateTime date)
+        {
+            var targetDate = date.Date;
+
+            var entries = await _context.ScadaHistoryPoints
+                .Where(x => x.Timestamp.Date == targetDate)
+                .Select(x => new
+                {
+                    x.Location,
+                    x.MetricType,
+                    x.SourceColumn,
+                    x.Value,
+                    x.Timestamp
+                })
+                .ToListAsync();
+
+            return Ok(entries);
+        }
+
 
         [HttpGet("daily-entries")]
         public async Task<IActionResult> GetDailyEntries()
         {
-            var entries = await _context.ScadaHistoryPoints
-                .GroupBy(x => x.Timestamp)
+            var entries = _context.ScadaHistoryPoints
+                .AsEnumerable()
+                .GroupBy(x => x.Timestamp.Date)
                 .Select(g => new
                 {
-                    timestamp = g.Key,
+                    date = g.Key,
+                    timestamp = g.Max(x => x.Timestamp),
                     count = g.Count()
                 })
                 .OrderByDescending(x => x.timestamp)
-                .ToListAsync();
+                .ToList();
 
             return Ok(entries);
         }
@@ -282,17 +228,10 @@ namespace Well_Readings.Controllers
         [HttpGet("daily-entry")]
         public async Task<IActionResult> GetDailyEntry(DateTime timestamp)
         {
+            var date = timestamp.Date;
+
             var entries = await _context.ScadaHistoryPoints
-                .Where(x => x.Timestamp == timestamp)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.Timestamp,
-                    x.Location,
-                    x.MetricType,
-                    x.SourceColumn,
-                    x.Value
-                })
+                .Where(x => x.Timestamp.Date == date)
                 .ToListAsync();
 
             return Ok(entries);
@@ -307,8 +246,12 @@ namespace Well_Readings.Controllers
             if (request.Timestamp == default)
                 return BadRequest("Timestamp is required.");
 
+            var originalDate = request.OriginalTimestamp == default
+                ? request.Timestamp.Date
+                : request.OriginalTimestamp.Date;
+
             var existing = await _context.ScadaHistoryPoints
-                .Where(x => x.Timestamp == request.Timestamp)
+                .Where(x => x.Timestamp.Date == originalDate)
                 .ToListAsync();
 
             _context.ScadaHistoryPoints.RemoveRange(existing);
@@ -326,8 +269,9 @@ namespace Well_Readings.Controllers
                 })
                 .ToList();
 
-            _context.ScadaHistoryPoints.AddRange(newEntries);
+            ApplyMeterTimestampSpacing(newEntries, request.Timestamp);
 
+            _context.ScadaHistoryPoints.AddRange(newEntries);
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -337,18 +281,31 @@ namespace Well_Readings.Controllers
             });
         }
 
-        public class DailyEntryUpdateRequest
+        [HttpPost("daily-entry/delete")]
+        public async Task<IActionResult> DeleteDailyEntries([FromBody] DeleteDailyEntriesRequest request)
         {
-            public DateTime Timestamp { get; set; }
-            public List<DailyEntryReadingDto> Readings { get; set; } = new();
+            if (request == null || request.Dates == null || request.Dates.Count == 0)
+                return BadRequest("No dates were selected.");
+
+            foreach (var date in request.Dates)
+            {
+                var targetDate = date.Date;
+
+                var entries = await _context.ScadaHistoryPoints
+                    .Where(x => x.Timestamp.Date == targetDate)
+                    .ToListAsync();
+
+                _context.ScadaHistoryPoints.RemoveRange(entries);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { deleted = true });
         }
 
-        public class DailyEntryReadingDto
+        public class DeleteDailyEntriesRequest
         {
-            public string Location { get; set; } = string.Empty;
-            public string MetricType { get; set; } = string.Empty;
-            public string SourceColumn { get; set; } = string.Empty;
-            public decimal? Value { get; set; }
+            public List<DateTime> Dates { get; set; } = new();
         }
 
         [HttpGet("monthly-site-report")]
@@ -361,8 +318,10 @@ namespace Well_Readings.Controllers
                 .OrderBy(x => x.Timestamp)
                 .ToListAsync();
 
+            var reportSites = GetReportSites();
+
             var selectedSites = site == "All Sites"
-                ? GetReportSites().Keys.ToList()
+                ? reportSites.Keys.ToList()
                 : new List<string> { site };
 
             var rows = new List<object>();
@@ -370,10 +329,10 @@ namespace Well_Readings.Controllers
 
             foreach (var selectedSite in selectedSites)
             {
-                if (!GetReportSites().ContainsKey(selectedSite))
+                if (!reportSites.ContainsKey(selectedSite))
                     continue;
 
-                var config = GetReportSites()[selectedSite];
+                var config = reportSites[selectedSite];
 
                 foreach (var meter in config.Meters)
                 {
@@ -384,7 +343,9 @@ namespace Well_Readings.Controllers
 
                     var dailyRows = new List<(DateTime Date, decimal Gallons)>();
 
-                    foreach (var current in meterPoints.Where(x => x.Timestamp.Date >= startDate.Date && x.Timestamp.Date <= endDate.Date))
+                    foreach (var current in meterPoints.Where(x =>
+                        x.Timestamp.Date >= startDate.Date &&
+                        x.Timestamp.Date <= endDate.Date))
                     {
                         var previous = meterPoints
                             .Where(x => x.Timestamp < current.Timestamp)
@@ -403,7 +364,7 @@ namespace Well_Readings.Controllers
 
                         rows.Add(new
                         {
-                            date = current.Timestamp.Date,
+                            date = current.Timestamp,
                             site = selectedSite,
                             name = meter.DisplayName,
                             gallonsPumped = gallons,
@@ -428,7 +389,7 @@ namespace Well_Readings.Controllers
 
             return Ok(new
             {
-                rows = rows.OrderBy(x => x.GetType().GetProperty("date")!.GetValue(x)).ToList(),
+                rows,
                 summary = summaryRows
             });
         }
@@ -454,7 +415,9 @@ namespace Well_Readings.Controllers
                         .OrderBy(x => x.Timestamp)
                         .ToList();
 
-                    foreach (var current in meterPoints.Where(x => x.Timestamp.Date >= startDate.Date && x.Timestamp.Date <= endDate.Date))
+                    foreach (var current in meterPoints.Where(x =>
+                        x.Timestamp.Date >= startDate.Date &&
+                        x.Timestamp.Date <= endDate.Date))
                     {
                         var previous = meterPoints
                             .Where(x => x.Timestamp < current.Timestamp)
@@ -478,119 +441,6 @@ namespace Well_Readings.Controllers
                 endDate,
                 totalGallonsPumped = totalGallons
             });
-        }
-
-        private static decimal? GetDailyValue(
-            List<ScadaHistoryPoint> points,
-            List<string> locations,
-            string metricType,
-            DateTime date)
-        {
-            return points
-                .Where(x =>
-                    locations.Contains(x.Location) &&
-                    x.MetricType == metricType &&
-                    x.Timestamp.Date == date.Date)
-                .OrderByDescending(x => x.Timestamp)
-                .Select(x => x.Value)
-                .FirstOrDefault();
-        }
-
-        private static Dictionary<string, MonthlyReportSiteConfig> GetReportSites()
-        {
-            return new Dictionary<string, MonthlyReportSiteConfig>
-            {
-                ["Reeves Well Site"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "Reeves Well Site", "Reeves" },
-                    Meters = new List<MonthlyReportMeterConfig>
-    {
-        new MonthlyReportMeterConfig { DisplayName = "Reeves Well", Location = "Reeves Well", MetricType = "Meter Reading" },
-        new MonthlyReportMeterConfig { DisplayName = "Reeves Well A", Location = "Reeves Well A", MetricType = "Meter Reading" }
-    }
-                },
-
-                ["Park Well Site"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "Park Well Site", "Park" },
-                    Meters = new List<MonthlyReportMeterConfig>
-            {
-                new MonthlyReportMeterConfig { DisplayName = "Park Well", Location = "Park Well", MetricType = "Meter Reading" },
-                new MonthlyReportMeterConfig { DisplayName = "Park Well A", Location = "Park Well A", MetricType = "Meter Reading" },
-                new MonthlyReportMeterConfig { DisplayName = "Park Well B", Location = "Park Well B", MetricType = "Meter Reading" },
-                new MonthlyReportMeterConfig { DisplayName = "Park", Location = "Park", MetricType = "Meter Reading" }
-            }
-                },
-
-                ["Woods"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "Woods" },
-                    Meters = new List<MonthlyReportMeterConfig>
-            {
-                new MonthlyReportMeterConfig { DisplayName = "Woods", Location = "Woods", MetricType = "Meter Reading" }
-            }
-                },
-
-                ["Catawissa"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "Catawissa" },
-                    Meters = new List<MonthlyReportMeterConfig>
-            {
-                new MonthlyReportMeterConfig { DisplayName = "Catawissa", Location = "Catawissa", MetricType = "Meter Reading" }
-            }
-                },
-
-                ["New"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "New" },
-                    Meters = new List<MonthlyReportMeterConfig>
-            {
-                new MonthlyReportMeterConfig { DisplayName = "New", Location = "New", MetricType = "Meter Reading" }
-            }
-                },
-
-                ["Oakwood"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "Oakwood" },
-                    Meters = new List<MonthlyReportMeterConfig>
-            {
-                new MonthlyReportMeterConfig { DisplayName = "Oakwood", Location = "Oakwood", MetricType = "Meter Reading" }
-            }
-                },
-
-                ["Ray"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "Ray" },
-                    Meters = new List<MonthlyReportMeterConfig>
-            {
-                new MonthlyReportMeterConfig { DisplayName = "Ray", Location = "Ray", MetricType = "Meter Reading" }
-            }
-                },
-
-                ["Filter Plant"] = new MonthlyReportSiteConfig
-                {
-                    ChemistryLocations = new List<string> { "Filter Plant" },
-                    Meters = new List<MonthlyReportMeterConfig>
-            {
-                new MonthlyReportMeterConfig { DisplayName = "Filter Plant", Location = "Filter Plant", MetricType = "Meter Reading" },
-                new MonthlyReportMeterConfig { DisplayName = "Filter 1", Location = "Filter 1", MetricType = "Total Filtration Flow Yesterday" },
-                new MonthlyReportMeterConfig { DisplayName = "Filter 2", Location = "Filter 2", MetricType = "Total Filtration Flow Yesterday" }
-            }
-                }
-            };
-        }
-
-        public class MonthlyReportSiteConfig
-        {
-            public List<string> ChemistryLocations { get; set; } = new();
-            public List<MonthlyReportMeterConfig> Meters { get; set; } = new();
-        }
-
-        public class MonthlyReportMeterConfig
-        {
-            public string DisplayName { get; set; } = string.Empty;
-            public string Location { get; set; } = string.Empty;
-            public string MetricType { get; set; } = string.Empty;
         }
 
         [HttpGet("report")]
@@ -650,33 +500,202 @@ namespace Well_Readings.Controllers
                 .FirstOrDefaultAsync();
         }
 
+        private static void ApplyMeterTimestampSpacing(List<ScadaHistoryPoint> readings, DateTime submittedTime)
+        {
+            var roundedStartTime = RoundToNearestFiveMinutes(submittedTime);
+
+            var siteOrder = new List<string>
+    {
+        "Reeves Well Site",
+        "Park Well Site",
+        "Woods",
+        "Catawissa",
+        "New",
+        "Oakwood",
+        "Ray",
+        "Filter Plant",
+        "Pump Stations"
+    };
+
+            string GetSiteGroup(ScadaHistoryPoint reading)
+            {
+                return reading.Location switch
+                {
+                    "Reeves Well" or "Reeves Well A" or "Reeves Well Site" => "Reeves Well Site",
+
+                    "Park Well" or "Park Well A" or "Park Well B" or "Park Well Site" => "Park Well Site",
+
+                    "Filter Plant" or "Mt. Jefferson" or "Filter 1" or "Filter 2" => "Filter Plant",
+
+                    "Beaver Creek Pump 1" or "Beaver Creek Pump 2" or "Beaver Creek Generator"
+                        or "Greenfield Pump 1" or "Greenfield Pump 2" or "Greenfield Generator"
+                        or "Helen Blevins Pump 1" or "Helen Blevins Pump 2"
+                        or "Dogget Pump 1" or "Dogget Pump 2" => "Pump Stations",
+
+                    _ => reading.Location
+                };
+            }
+
+            var groups = readings
+                .GroupBy(GetSiteGroup)
+                .OrderBy(g =>
+                {
+                    var index = siteOrder.IndexOf(g.Key);
+                    return index == -1 ? 999 : index;
+                })
+                .ToList();
+
+            for (int i = 0; i < groups.Count; i++)
+            {
+                var groupTime = roundedStartTime.AddMinutes(i * 10);
+
+                foreach (var reading in groups[i])
+                {
+                    reading.Timestamp = groupTime;
+                }
+            }
+        }
+
+        private static DateTime RoundToNearestFiveMinutes(DateTime dateTime)
+        {
+            var ticks = TimeSpan.FromMinutes(5).Ticks;
+            return new DateTime(((dateTime.Ticks + ticks / 2) / ticks) * ticks);
+        }
+
+        private static decimal? GetDailyValue(
+            List<ScadaHistoryPoint> points,
+            List<string> locations,
+            string metricType,
+            DateTime date)
+        {
+            return points
+                .Where(x =>
+                    locations.Contains(x.Location) &&
+                    x.MetricType == metricType &&
+                    x.Timestamp.Date == date.Date)
+                .OrderByDescending(x => x.Timestamp)
+                .Select(x => x.Value)
+                .FirstOrDefault();
+        }
+
+        private static Dictionary<string, MonthlyReportSiteConfig> GetReportSites()
+        {
+            return new Dictionary<string, MonthlyReportSiteConfig>
+            {
+                ["Reeves Well Site"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "Reeves Well Site", "Reeves" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "Reeves Well", Location = "Reeves Well", MetricType = "Meter Reading" },
+                        new MonthlyReportMeterConfig { DisplayName = "Reeves Well A", Location = "Reeves Well A", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["Park Well Site"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "Park Well Site", "Park" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "Park Well", Location = "Park Well", MetricType = "Meter Reading" },
+                        new MonthlyReportMeterConfig { DisplayName = "Park Well A", Location = "Park Well A", MetricType = "Meter Reading" },
+                        new MonthlyReportMeterConfig { DisplayName = "Park Well B", Location = "Park Well B", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["Woods"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "Woods" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "Woods", Location = "Woods", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["Catawissa"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "Catawissa" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "Catawissa", Location = "Catawissa", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["New"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "New" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "New", Location = "New", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["Oakwood"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "Oakwood" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "Oakwood", Location = "Oakwood", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["Ray"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "Ray" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "Ray", Location = "Ray", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["Filter Plant"] = new MonthlyReportSiteConfig
+                {
+                    ChemistryLocations = new List<string> { "Filter Plant" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig { DisplayName = "Filter Plant", Location = "Filter Plant", MetricType = "Meter Reading" },
+                        new MonthlyReportMeterConfig { DisplayName = "Filter 1", Location = "Filter 1", MetricType = "Total Filtration Flow Yesterday" },
+                        new MonthlyReportMeterConfig { DisplayName = "Filter 2", Location = "Filter 2", MetricType = "Total Filtration Flow Yesterday" }
+                    }
+                }
+            };
+        }
+
         private static string GetLocation(string sourceColumn)
         {
             return sourceColumn switch
             {
-                "Reeves" => "Reeves",
-                "Reeves A" => "Reeves A",
-                "Park" => "Park",
-                "Park A" => "Park A",
-                "Park B" => "Park B",
+                "Reeves" => "Reeves Well",
+                "Reeves A" => "Reeves Well A",
+                "Reeves Well" => "Reeves Well",
+                "Reeves Well A" => "Reeves Well A",
+
+                "Park" => "Park Well",
+                "Park A" => "Park Well A",
+                "Park B" => "Park Well B",
+                "Park Well" => "Park Well",
+                "Park Well A" => "Park Well A",
+                "Park Well B" => "Park Well B",
+
                 "Woods" => "Woods",
                 "Catawissa" => "Catawissa",
                 "New" => "New",
                 "Oakwood" => "Oakwood",
                 "Ray" => "Ray",
+                "Filter Plant" => "Filter Plant",
+                "Mt. Jefferson" => "Mt. Jefferson",
 
-                "Cl-R" or "PO4-R" or "pH-R" => "Reeves",
-                "Cl-P" or "PO4-P" or "pH-P" => "Park",
+                "Cl-R" or "PO4-R" or "pH-R" => "Reeves Well Site",
+                "Cl-P" or "PO4-P" or "pH-P" => "Park Well Site",
                 "Cl-W" or "PO4-W" or "pH-W" => "Woods",
                 "Cl-C" or "PO4-C" or "pH-C" => "Catawissa",
                 "Cl-N" or "PO4-N" or "pH-N" => "New",
                 "Cl-O" or "PO4-O" or "pH-O" => "Oakwood",
                 "Cl-Ray" or "PO4-Ray" or "pH-Ray" => "Ray",
 
+                _ when sourceColumn.Contains("Filter 1", StringComparison.OrdinalIgnoreCase) => "Filter 1",
+                _ when sourceColumn.Contains("Filter 2", StringComparison.OrdinalIgnoreCase) => "Filter 2",
                 _ when sourceColumn.Contains("Filter", StringComparison.OrdinalIgnoreCase) => "Filter Plant",
-                _ when sourceColumn.Contains("Feed", StringComparison.OrdinalIgnoreCase) => "Filter Plant",
-                _ when sourceColumn.Contains("Filtrate", StringComparison.OrdinalIgnoreCase) => "Filter Plant",
-                _ when sourceColumn.Contains("TMP", StringComparison.OrdinalIgnoreCase) => "Filter Plant",
                 _ when sourceColumn.EndsWith("-F", StringComparison.OrdinalIgnoreCase) => "Filter Plant",
 
                 _ => sourceColumn
@@ -685,10 +704,14 @@ namespace Well_Readings.Controllers
 
         private static string GetMetricType(string sourceColumn)
         {
-            if (sourceColumn is "Reeves" or "Reeves A" or "Park" or "Park A" or "Park B"
+            if (sourceColumn is "Reeves" or "Reeves A" or "Reeves Well" or "Reeves Well A"
+                or "Park" or "Park A" or "Park B" or "Park Well" or "Park Well A" or "Park Well B"
                 or "Woods" or "Catawissa" or "New" or "Oakwood" or "Ray"
                 or "Filter Plant" or "Mt. Jefferson")
                 return "Meter Reading";
+
+            if (sourceColumn.Contains("Total Filtration Flow Yesterday", StringComparison.OrdinalIgnoreCase))
+                return "Total Filtration Flow Yesterday";
 
             if (sourceColumn.StartsWith("Cl", StringComparison.OrdinalIgnoreCase))
                 return "Chlorine";
@@ -702,18 +725,53 @@ namespace Well_Readings.Controllers
             if (sourceColumn.Contains("Temp", StringComparison.OrdinalIgnoreCase))
                 return "Temperature";
 
+            if (sourceColumn.Contains("Feed Flow", StringComparison.OrdinalIgnoreCase))
+                return "Feed Flow";
+
+            if (sourceColumn.Contains("Filtrate Flow", StringComparison.OrdinalIgnoreCase))
+                return "Filtrate Flow";
+
             if (sourceColumn.Contains("Flow", StringComparison.OrdinalIgnoreCase))
-                return sourceColumn.Contains("Feed", StringComparison.OrdinalIgnoreCase)
-                    ? "Feed Flow"
-                    : "Flow";
+                return "Flow";
 
             if (sourceColumn.Contains("Pressure", StringComparison.OrdinalIgnoreCase))
                 return sourceColumn;
+
+            if (sourceColumn.Contains("TMP", StringComparison.OrdinalIgnoreCase))
+                return "TMP";
 
             if (sourceColumn.Contains("Turb", StringComparison.OrdinalIgnoreCase))
                 return "Turbidity";
 
             return sourceColumn;
+        }
+
+        public class DailyEntryUpdateRequest
+        {
+            public DateTime OriginalTimestamp { get; set; }
+            public DateTime Timestamp { get; set; }
+            public List<DailyEntryReadingDto> Readings { get; set; } = new();
+        }
+
+        public class DailyEntryReadingDto
+        {
+            public string Location { get; set; } = string.Empty;
+            public string MetricType { get; set; } = string.Empty;
+            public string SourceColumn { get; set; } = string.Empty;
+            public decimal? Value { get; set; }
+        }
+
+        public class MonthlyReportSiteConfig
+        {
+            public List<string> ChemistryLocations { get; set; } = new();
+            public List<MonthlyReportMeterConfig> Meters { get; set; } = new();
+        }
+
+        public class MonthlyReportMeterConfig
+        {
+            public string DisplayName { get; set; } = string.Empty;
+            public string Location { get; set; } = string.Empty;
+            public string MetricType { get; set; } = string.Empty;
         }
     }
 }

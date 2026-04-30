@@ -5,14 +5,19 @@
 
 <div class="entry-header">
     <label>Entry Date:</label>
-    <input type="date" id="entryDate" />
+    <input type="date" id="entryDate" onchange="loadExistingEntry()" />
+    <button type="button" class="load-btn" onclick="loadExistingEntry()">Load Date</button>
+</div>
+
+<div id="lockedNotice" class="locked-notice" style="display:none;">
+    This date already has saved readings. Submitting again will overwrite that date.
 </div>
 
 <div id="siteTiles" class="site-grid"></div>
 
 <div id="entryPanel" class="entry-panel" style="display:none;"></div>
 
-<button type="button" class="submit-btn" onclick="submitReadings()">Submit Readings</button>
+<button type="button" class="submit-btn" onclick="submitReadings()">Submit / Update Readings</button>
 
 <div id="message"></div>
 
@@ -20,11 +25,41 @@
     .entry-header {
         margin-bottom: 20px;
         color: #111827;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
     }
 
         .entry-header label {
             font-weight: bold;
         }
+
+        .entry-header input {
+            padding: 8px;
+            border: 1px solid #374151;
+            border-radius: 6px;
+        }
+
+    .load-btn {
+        padding: 8px 14px;
+        background: #374151;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .locked-notice {
+        background: #fef3c7;
+        color: #92400e;
+        padding: 12px;
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
 
     .site-grid {
         display: grid;
@@ -44,7 +79,15 @@
         font-weight: bold;
     }
 
+        .site-tile:hover {
+            background: #2563eb;
+        }
+
         .site-tile.complete {
+            background: #2563eb;
+        }
+
+        .site-tile.running {
             background: #047857;
         }
 
@@ -62,13 +105,39 @@
             color: #111827;
         }
 
+    .entry-group {
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        overflow: hidden;
+    }
+
+    .group-header {
+        background: #e5e7eb;
+        color: #111827;
+        padding: 12px 15px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        border-bottom: 2px solid #047857;
+    }
+
+    .group-body {
+        padding: 15px;
+    }
+
+        .group-body.collapsed {
+            display: none;
+        }
+
     .field-row {
         margin-bottom: 12px;
     }
 
         .field-row label {
             display: inline-block;
-            width: 220px;
+            width: 260px;
             font-weight: bold;
         }
 
@@ -96,21 +165,6 @@
         margin-top: 20px;
         font-weight: bold;
         color: #111827;
-    }
-
-    .entry-group {
-        background: #ffffff;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-
-    .entry-group h3 {
-        color: #111827;
-        border-bottom: 2px solid #047857;
-        padding-bottom: 6px;
-        margin-bottom: 12px;
     }
 </style>
 
@@ -190,53 +244,102 @@
             ]
         },
         {
-    name: "Filter Plant",
-    displayName: "Filter Plant",
-    groups: [
-        {
-            groupName: "Filter 1",
-            fields: [
-                { label: "Feed Pressure", location: "Filter 1", metricType: "Feed Pressure", sourceColumn: "Filter 1 Feed Pressure" },
-                { label: "Feed Flow", location: "Filter 1", metricType: "Feed Flow", sourceColumn: "Filter 1 Feed Flow" },
-                { label: "Filtrate Pressure", location: "Filter 1", metricType: "Filtrate Pressure", sourceColumn: "Filter 1 Filtrate Pressure" },
-                { label: "Filtrate Flow", location: "Filter 1", metricType: "Filtrate Flow", sourceColumn: "Filter 1 Filtrate Flow" },
-                { label: "TMP", location: "Filter 1", metricType: "TMP", sourceColumn: "Filter 1 TMP" },
-                { label: "Total Filter Run Time", location: "Filter 1", metricType: "Total Filter Run Time", sourceColumn: "Filter 1 Total Filter Run Time" },
-                { label: "Total Filtration Flow Yesterday", location: "Filter 1", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 1 Total Filtration Flow Yesterday" },
-                { label: "Pressure Decay", location: "Filter 1", metricType: "Pressure Decay", sourceColumn: "Filter 1 Pressure Decay" }
+            name: "Filter Plant",
+            displayName: "Filter Plant",
+            groups: [
+                {
+                    title: "Filter 1",
+                    fields: [
+                        { label: "Feed Pressure", location: "Filter 1", metricType: "Feed Pressure", sourceColumn: "Filter 1 Feed Pressure" },
+                        { label: "Feed Flow", location: "Filter 1", metricType: "Feed Flow", sourceColumn: "Filter 1 Feed Flow" },
+                        { label: "Filtrate Pressure", location: "Filter 1", metricType: "Filtrate Pressure", sourceColumn: "Filter 1 Filtrate Pressure" },
+                        { label: "Filtrate Flow", location: "Filter 1", metricType: "Filtrate Flow", sourceColumn: "Filter 1 Filtrate Flow" },
+                        { label: "TMP", location: "Filter 1", metricType: "TMP", sourceColumn: "Filter 1 TMP" },
+                        { label: "Total Filter Run Time", location: "Filter 1", metricType: "Total Filter Run Time", sourceColumn: "Filter 1 Total Filter Run Time" },
+                        { label: "Total Filtration Flow Yesterday", location: "Filter 1", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 1 Total Filtration Flow Yesterday" },
+                        { label: "Pressure Decay", location: "Filter 1", metricType: "Pressure Decay", sourceColumn: "Filter 1 Pressure Decay" }
+                    ]
+                },
+                {
+                    title: "Filter 2",
+                    fields: [
+                        { label: "Feed Pressure", location: "Filter 2", metricType: "Feed Pressure", sourceColumn: "Filter 2 Feed Pressure" },
+                        { label: "Feed Flow", location: "Filter 2", metricType: "Feed Flow", sourceColumn: "Filter 2 Feed Flow" },
+                        { label: "Filtrate Pressure", location: "Filter 2", metricType: "Filtrate Pressure", sourceColumn: "Filter 2 Filtrate Pressure" },
+                        { label: "Filtrate Flow", location: "Filter 2", metricType: "Filtrate Flow", sourceColumn: "Filter 2 Filtrate Flow" },
+                        { label: "TMP", location: "Filter 2", metricType: "TMP", sourceColumn: "Filter 2 TMP" },
+                        { label: "Total Filter Run Time", location: "Filter 2", metricType: "Total Filter Run Time", sourceColumn: "Filter 2 Total Filter Run Time" },
+                        { label: "Total Filtration Flow Yesterday", location: "Filter 2", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 2 Total Filtration Flow Yesterday" },
+                        { label: "Pressure Decay", location: "Filter 2", metricType: "Pressure Decay", sourceColumn: "Filter 2 Pressure Decay" }
+                    ]
+                },
+                {
+                    title: "Plant Readings",
+                    fields: [
+                        { label: "Meter Reading", location: "Filter Plant", metricType: "Meter Reading", sourceColumn: "Filter Plant" },
+                        { label: "Chlorine", location: "Filter Plant", metricType: "Chlorine", sourceColumn: "Cl-F" },
+                        { label: "Phosphate", location: "Filter Plant", metricType: "Phosphate", sourceColumn: "PO4-F" },
+                        { label: "Temperature", location: "Filter Plant", metricType: "Temperature", sourceColumn: "Temp-F" },
+                        { label: "Mt. Jefferson", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" }
+                    ]
+                }
             ]
         },
         {
-            groupName: "Filter 2",
-            fields: [
-                { label: "Feed Pressure", location: "Filter 2", metricType: "Feed Pressure", sourceColumn: "Filter 2 Feed Pressure" },
-                { label: "Feed Flow", location: "Filter 2", metricType: "Feed Flow", sourceColumn: "Filter 2 Feed Flow" },
-                { label: "Filtrate Pressure", location: "Filter 2", metricType: "Filtrate Pressure", sourceColumn: "Filter 2 Filtrate Pressure" },
-                { label: "Filtrate Flow", location: "Filter 2", metricType: "Filtrate Flow", sourceColumn: "Filter 2 Filtrate Flow" },
-                { label: "TMP", location: "Filter 2", metricType: "TMP", sourceColumn: "Filter 2 TMP" },
-                { label: "Total Filter Run Time", location: "Filter 2", metricType: "Total Filter Run Time", sourceColumn: "Filter 2 Total Filter Run Time" },
-                { label: "Total Filtration Flow Yesterday", location: "Filter 2", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 2 Total Filtration Flow Yesterday" },
-                { label: "Pressure Decay", location: "Filter 2", metricType: "Pressure Decay", sourceColumn: "Filter 2 Pressure Decay" }
-            ]
-        },
-        {
-            groupName: "Plant Readings",
-            fields: [
-                { label: "Meter Reading", location: "Filter Plant", metricType: "Meter Reading", sourceColumn: "Filter Plant" },
-                { label: "Chlorine", location: "Filter Plant", metricType: "Chlorine", sourceColumn: "Cl-F" },
-                { label: "Phosphate", location: "Filter Plant", metricType: "Phosphate", sourceColumn: "PO4-F" },
-                { label: "pH", location: "Filter Plant", metricType: "pH", sourceColumn: "pH-F" },
-                { label: "Temperature", location: "Filter Plant", metricType: "Temperature", sourceColumn: "Temp-F" },
-                { label: "Mt. Jefferson Meter", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" }
+            name: "Pump Stations",
+            displayName: "Pump Stations",
+            groups: [
+                {
+                    title: "Beaver Creek",
+                    fields: [
+                        { label: "Pump 1", location: "Beaver Creek Pump 1", metricType: "Pump Status", sourceColumn: "Beaver Creek Pump 1" },
+                        { label: "Pump 2", location: "Beaver Creek Pump 2", metricType: "Pump Status", sourceColumn: "Beaver Creek Pump 2" },
+                        { label: "Generator", location: "Beaver Creek Generator", metricType: "Generator Status", sourceColumn: "Beaver Creek Generator" }
+                    ]
+                },
+                {
+                    title: "Greenfield",
+                    fields: [
+                        { label: "Pump 1", location: "Greenfield Pump 1", metricType: "Pump Status", sourceColumn: "Greenfield Pump 1" },
+                        { label: "Pump 2", location: "Greenfield Pump 2", metricType: "Pump Status", sourceColumn: "Greenfield Pump 2" },
+                        { label: "Generator", location: "Greenfield Generator", metricType: "Generator Status", sourceColumn: "Greenfield Generator" }
+                    ]
+                },
+                {
+                    title: "Helen Blevins",
+                    fields: [
+                        { label: "Pump 1", location: "Helen Blevins Pump 1", metricType: "Pump Status", sourceColumn: "Helen Blevins Pump 1" },
+                        { label: "Pump 2", location: "Helen Blevins Pump 2", metricType: "Pump Status", sourceColumn: "Helen Blevins Pump 2" }
+                    ]
+                },
+                {
+                    title: "Dogget",
+                    fields: [
+                        { label: "Pump 1", location: "Dogget Pump 1", metricType: "Pump Status", sourceColumn: "Dogget Pump 1" },
+                        { label: "Pump 2", location: "Dogget Pump 2", metricType: "Pump Status", sourceColumn: "Dogget Pump 2" }
+                    ]
+                }
             ]
         }
-    ]
-}
     ];
 
     const values = {};
+    let currentSiteName = null;
+    let runningStatuses = {};
 
     document.getElementById("entryDate").valueAsDate = new Date();
+
+    function keyFor(field) {
+        return `${field.location}|${field.metricType}|${field.sourceColumn}`;
+    }
+
+    function getAllFields(site) {
+        if (site.groups) {
+            return site.groups.flatMap(group => group.fields);
+        }
+
+        return site.fields;
+    }
 
     function buildTiles() {
         const container = document.getElementById("siteTiles");
@@ -250,95 +353,170 @@
             div.onclick = () => openSite(site.name);
             container.appendChild(div);
         });
+
+        refreshAllTileStatuses();
     }
 
     function openSite(siteName) {
-    const site = sites.find(x => x.name === siteName);
-    const panel = document.getElementById("entryPanel");
+        currentSiteName = siteName;
 
-    if (!site) return;
+        const site = sites.find(x => x.name === siteName);
+        const panel = document.getElementById("entryPanel");
 
-    panel.style.display = "block";
+        if (!site) return;
 
-    const groups = site.groups ?? [
-        {
-            groupName: site.displayName,
-            fields: site.fields
-        }
-    ];
+        panel.style.display = "block";
 
-    panel.innerHTML = `
-        <h2>${site.displayName}</h2>
+        if (site.groups) {
+            panel.innerHTML = `
+                <h2>${site.displayName}</h2>
 
-        ${groups.map(group => `
-            <div class="entry-group">
-                <h3>${group.groupName}</h3>
-
-                ${group.fields.map(field => {
-                    const key = `${field.location}|${field.metricType}|${field.sourceColumn}`;
-                    const savedValue = values[key] ?? "";
-
-                    return `
-                        <div class="field-row">
-                            <label>${field.label}</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value="${savedValue}"
-                                data-site="${site.name}"
-                                data-location="${field.location}"
-                                data-metric="${field.metricType}"
-                                data-source="${field.sourceColumn}"
-                                oninput="saveValueFromInput(this)" />
+                ${site.groups.map((group, index) => `
+                    <div class="entry-group">
+                        <div class="group-header" onclick="toggleGroup('${site.name}-group-${index}')">
+                            ${group.title} ▼
                         </div>
-                    `;
-                }).join("")}
+
+                        <div class="group-body" id="${site.name}-group-${index}">
+                            ${group.fields.map(field => renderField(site, field)).join("")}
+                        </div>
+                    </div>
+                `).join("")}
+            `;
+        } else {
+            panel.innerHTML = `
+                <h2>${site.displayName}</h2>
+                ${site.fields.map(field => renderField(site, field)).join("")}
+            `;
+        }
+    }
+
+    function renderField(site, field) {
+        const key = keyFor(field);
+        const savedValue = values[key] ?? "";
+
+        return `
+            <div class="field-row">
+                <label>${field.label}</label>
+                <input
+                    type="number"
+                    inputmode="decimal"
+                    pattern="[0-9]*"
+                    step="0.01"
+                    value="${savedValue}"
+                    data-site="${site.name}"
+                    data-location="${field.location}"
+                    data-metric="${field.metricType}"
+                    data-source="${field.sourceColumn}"
+                    oninput="saveValueFromInput(this)" />
             </div>
-        `).join("")}
-    `;
-}
+        `;
+    }
+
+    function toggleGroup(id) {
+        const group = document.getElementById(id);
+        if (!group) return;
+        group.classList.toggle("collapsed");
+    }
 
     function saveValueFromInput(input) {
         const key = `${input.dataset.location}|${input.dataset.metric}|${input.dataset.source}`;
         values[key] = input.value;
-
-        markTileComplete(input.dataset.site);
+        markTileStatus(input.dataset.site);
     }
 
-    function markTileComplete(siteName) {
-    const site = sites.find(x => x.name === siteName);
-    const tile = document.getElementById(`tile-${siteName}`);
+    function markTileStatus(siteName) {
+        const site = sites.find(x => x.name === siteName);
+        const tile = document.getElementById(`tile-${siteName}`);
 
-    if (!site || !tile) return;
+        if (!site || !tile) return;
 
-    const groups = site.groups ?? [
-        {
-            groupName: site.displayName,
-            fields: site.fields
+        tile.classList.remove("complete", "running");
+
+        const isRunning =
+            runningStatuses[site.name] ||
+            (site.name === "Filter Plant" && (runningStatuses["Filter 1"] || runningStatuses["Filter 2"]));
+
+        const hasAnyValue = getAllFields(site).some(field => {
+            const key = keyFor(field);
+            return values[key] !== undefined && values[key] !== "";
+        });
+
+        if (isRunning) {
+            tile.classList.add("running");
+        } else if (hasAnyValue) {
+            tile.classList.add("complete");
         }
-    ];
-
-    const allFields = groups.flatMap(group => group.fields);
-
-    const complete = allFields.every(field => {
-        const key = `${field.location}|${field.metricType}|${field.sourceColumn}`;
-        return values[key] !== undefined && values[key] !== "";
-    });
-
-    if (complete) {
-        tile.classList.add("complete");
-    } else {
-        tile.classList.remove("complete");
     }
-}
+
+    function refreshAllTileStatuses() {
+        sites.forEach(site => markTileStatus(site.name));
+    }
+
+    async function loadRunningStatuses() {
+        const response = await fetch("/api/maintenance/site-statuses");
+
+        if (!response.ok) return;
+
+        const statuses = await response.json();
+        runningStatuses = {};
+
+        statuses.forEach(status => {
+            runningStatuses[status.siteName] = status.isOn;
+        });
+
+        refreshAllTileStatuses();
+    }
+
+    async function loadExistingEntry() {
+        const date = document.getElementById("entryDate").value;
+
+        if (!date) return;
+
+        Object.keys(values).forEach(key => delete values[key]);
+
+        const response = await fetch(`/api/scada/entry-by-date?date=${date}`);
+
+        if (!response.ok) {
+            document.getElementById("message").innerText = "Error loading selected date.";
+            return;
+        }
+
+        const entries = await response.json();
+
+        entries.forEach(item => {
+            const key = `${item.location}|${item.metricType}|${item.sourceColumn}`;
+            values[key] = item.value;
+        });
+
+        document.getElementById("lockedNotice").style.display =
+            entries.length > 0 ? "block" : "none";
+
+        refreshAllTileStatuses();
+
+        if (currentSiteName) {
+            openSite(currentSiteName);
+        }
+
+        document.getElementById("message").innerText =
+            entries.length > 0 ? "Existing entry loaded." : "No entry found for this date.";
+    }
 
     async function submitReadings() {
-        const timestamp = document.getElementById("entryDate").value;
+        const selectedDate = document.getElementById("entryDate").value;
 
-        if (!timestamp) {
+        if (!selectedDate) {
             alert("Please select a reading date.");
             return;
         }
+
+        const now = new Date();
+        const currentTime =
+            now.getHours().toString().padStart(2, "0") + ":" +
+            now.getMinutes().toString().padStart(2, "0") + ":" +
+            now.getSeconds().toString().padStart(2, "0");
+
+        const timestamp = `${selectedDate}T${currentTime}`;
 
         const readings = [];
 
@@ -363,6 +541,14 @@
             return;
         }
 
+        const existingResponse = await fetch(`/api/scada/entry-by-date?date=${selectedDate}`);
+        const existingEntries = existingResponse.ok ? await existingResponse.json() : [];
+
+        if (existingEntries.length > 0) {
+            const confirmOverwrite = confirm("This date already has readings. Submit anyway and overwrite that date?");
+            if (!confirmOverwrite) return;
+        }
+
         const response = await fetch("/api/scada/manual-entry", {
             method: "POST",
             headers: {
@@ -376,6 +562,8 @@
         if (response.ok) {
             message.innerText = "Readings saved successfully.";
             message.style.color = "#047857";
+            document.getElementById("lockedNotice").style.display = "block";
+            refreshAllTileStatuses();
         } else {
             message.innerText = "Error saving readings.";
             message.style.color = "#b91c1c";
@@ -383,4 +571,6 @@
     }
 
     buildTiles();
+    loadRunningStatuses();
+    loadExistingEntry();
 </script>

@@ -12,8 +12,8 @@ using Well_Readings.Data;
 namespace Well_Readings.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260429162805_CreateScadaHistoryPoints")]
-    partial class CreateScadaHistoryPoints
+    [Migration("20260430154657_AddMaintenanceSiteStatuses")]
+    partial class AddMaintenanceSiteStatuses
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -124,6 +124,28 @@ namespace Well_Readings.Migrations
                     b.HasIndex("SiteName", "PumpType", "InstalledDate");
 
                     b.ToTable("MaintenancePumpInstalls");
+                });
+
+            modelBuilder.Entity("Well_Readings.Models.MaintenanceSiteStatus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsOn")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SiteName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MaintenanceSiteStatuses");
                 });
 
             modelBuilder.Entity("Well_Readings.Models.Plant", b =>

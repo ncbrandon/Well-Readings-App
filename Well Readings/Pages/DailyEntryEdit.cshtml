@@ -4,15 +4,17 @@
 <h1>Edit Daily Entry</h1>
 
 <div class="entry-header">
-    <strong>Date / Time:</strong>
-    <span id="displayTimestamp"></span>
+    <label>Date:</label>
+    <input type="date" id="entryDate" />
+
+    <label>Time:</label>
+    <input type="time" id="entryTime" step="1" />
 </div>
 
 <div id="entryPanel" class="entry-panel"></div>
 
 <button type="button" class="save-btn" onclick="saveEntry()">Save Changes</button>
-
-<a class="back-link" href="/DailyEntries">Back to Daily Entries</a>
+<a class="back-link" href="/DailyEntry">Back to Daily Entries</a>
 
 <div id="message"></div>
 
@@ -20,7 +22,23 @@
     .entry-header {
         margin-bottom: 20px;
         color: #111827;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
     }
+
+        .entry-header label {
+            font-weight: bold;
+        }
+
+        .entry-header input {
+            padding: 8px;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #111827;
+            background: white;
+        }
 
     .entry-panel {
         background: #f3f4f6;
@@ -50,7 +68,7 @@
 
         .field-row label {
             display: inline-block;
-            width: 260px;
+            width: 300px;
             font-weight: bold;
             color: #111827;
         }
@@ -89,7 +107,7 @@
 </style>
 
 <script>
-    const timestamp = new URLSearchParams(window.location.search).get("timestamp");
+    const originalTimestamp = new URLSearchParams(window.location.search).get("timestamp");
 
     const fieldGroups = [
         {
@@ -111,6 +129,51 @@
                 { label: "Chlorine", location: "Park Well Site", metricType: "Chlorine", sourceColumn: "Cl-P" },
                 { label: "Phosphate", location: "Park Well Site", metricType: "Phosphate", sourceColumn: "PO4-P" },
                 { label: "pH", location: "Park Well Site", metricType: "pH", sourceColumn: "pH-P" }
+            ]
+        },
+        {
+            groupName: "Woods",
+            fields: [
+                { label: "Meter Reading", location: "Woods", metricType: "Meter Reading", sourceColumn: "Woods" },
+                { label: "Chlorine", location: "Woods", metricType: "Chlorine", sourceColumn: "Cl-W" },
+                { label: "Phosphate", location: "Woods", metricType: "Phosphate", sourceColumn: "PO4-W" },
+                { label: "pH", location: "Woods", metricType: "pH", sourceColumn: "pH-W" }
+            ]
+        },
+        {
+            groupName: "Catawissa",
+            fields: [
+                { label: "Meter Reading", location: "Catawissa", metricType: "Meter Reading", sourceColumn: "Catawissa" },
+                { label: "Chlorine", location: "Catawissa", metricType: "Chlorine", sourceColumn: "Cl-C" },
+                { label: "Phosphate", location: "Catawissa", metricType: "Phosphate", sourceColumn: "PO4-C" },
+                { label: "pH", location: "Catawissa", metricType: "pH", sourceColumn: "pH-C" }
+            ]
+        },
+        {
+            groupName: "New",
+            fields: [
+                { label: "Meter Reading", location: "New", metricType: "Meter Reading", sourceColumn: "New" },
+                { label: "Chlorine", location: "New", metricType: "Chlorine", sourceColumn: "Cl-N" },
+                { label: "Phosphate", location: "New", metricType: "Phosphate", sourceColumn: "PO4-N" },
+                { label: "pH", location: "New", metricType: "pH", sourceColumn: "pH-N" }
+            ]
+        },
+        {
+            groupName: "Oakwood",
+            fields: [
+                { label: "Meter Reading", location: "Oakwood", metricType: "Meter Reading", sourceColumn: "Oakwood" },
+                { label: "Chlorine", location: "Oakwood", metricType: "Chlorine", sourceColumn: "Cl-O" },
+                { label: "Phosphate", location: "Oakwood", metricType: "Phosphate", sourceColumn: "PO4-O" },
+                { label: "pH", location: "Oakwood", metricType: "pH", sourceColumn: "pH-O" }
+            ]
+        },
+        {
+            groupName: "Ray",
+            fields: [
+                { label: "Meter Reading", location: "Ray", metricType: "Meter Reading", sourceColumn: "Ray" },
+                { label: "Chlorine", location: "Ray", metricType: "Chlorine", sourceColumn: "Cl-Ray" },
+                { label: "Phosphate", location: "Ray", metricType: "Phosphate", sourceColumn: "PO4-Ray" },
+                { label: "pH", location: "Ray", metricType: "pH", sourceColumn: "pH-Ray" }
             ]
         },
         {
@@ -147,7 +210,9 @@
                 { label: "Phosphate", location: "Filter Plant", metricType: "Phosphate", sourceColumn: "PO4-F" },
                 { label: "pH", location: "Filter Plant", metricType: "pH", sourceColumn: "pH-F" },
                 { label: "Temperature", location: "Filter Plant", metricType: "Temperature", sourceColumn: "Temp-F" },
-                { label: "Mt. Jefferson Meter", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" }
+                { label: "Mt. Jefferson Meter", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" },
+                { label: "Pump Flow", location: "Pump Stations", metricType: "Flow", sourceColumn: "Pump Flow" },
+                { label: "Pressure", location: "Pump Stations", metricType: "Pressure", sourceColumn: "Pump Pressure" }
             ]
         }
     ];
@@ -155,15 +220,22 @@
     const values = {};
 
     async function loadEntry() {
-        if (!timestamp) {
+        if (!originalTimestamp) {
             document.getElementById("message").innerText = "No timestamp was provided.";
             return;
         }
 
-        document.getElementById("displayTimestamp").innerText =
-            new Date(timestamp).toLocaleString();
+        const originalDate = new Date(originalTimestamp);
+        document.getElementById("entryDate").value = originalDate.toISOString().slice(0, 10);
+        document.getElementById("entryTime").value = originalDate.toTimeString().slice(0, 8);
 
-        const response = await fetch(`/api/scada/daily-entry?timestamp=${encodeURIComponent(timestamp)}`);
+        const response = await fetch(`/api/scada/daily-entry?timestamp=${encodeURIComponent(originalTimestamp)}`);
+
+        if (!response.ok) {
+            document.getElementById("message").innerText = "Error loading daily entry.";
+            return;
+        }
+
         const entries = await response.json();
 
         entries.forEach(item => {
@@ -203,18 +275,25 @@
     }
 
     async function saveEntry() {
-        const inputs = document.querySelectorAll("#entryPanel input");
+        const date = document.getElementById("entryDate").value;
+        const time = document.getElementById("entryTime").value;
 
+        if (!date || !time) {
+            alert("Please enter both date and time.");
+            return;
+        }
+
+        const newTimestamp = new Date(`${date}T${time}`).toISOString();
+
+        const inputs = document.querySelectorAll("#entryPanel input");
         const readings = [];
 
         inputs.forEach(input => {
-            const value = input.value === "" ? null : parseFloat(input.value);
-
             readings.push({
                 location: input.dataset.location,
                 metricType: input.dataset.metric,
                 sourceColumn: input.dataset.source,
-                value: value
+                value: input.value === "" ? null : parseFloat(input.value)
             });
         });
 
@@ -224,7 +303,8 @@
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                timestamp: timestamp,
+                originalTimestamp: originalTimestamp,
+                timestamp: newTimestamp,
                 readings: readings
             })
         });

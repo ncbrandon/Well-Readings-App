@@ -3,6 +3,13 @@
 
 <h1>Maintenance</h1>
 
+<section class="maintenance-status-section">
+    <h2>Site Running Status</h2>
+    <p>Check sites that are currently ON.</p>
+
+    <div id="statusChecks" class="status-check-grid"></div>
+</section>
+
 <div id="siteTiles" class="site-grid"></div>
 
 <div id="maintenancePanel" class="maintenance-panel" style="display:none;"></div>
@@ -99,6 +106,34 @@
         font-weight: bold;
         color: #111827;
     }
+
+    .maintenance-status-section {
+        background: #f3f4f6;
+        color: #111827;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+    }
+
+    .status-check-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+    }
+
+    .status-check {
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 12px;
+        font-weight: bold;
+    }
+
+        .status-check input {
+            margin-right: 8px;
+            transform: scale(1.2);
+        }
+
 </style>
 
 <script>
@@ -262,4 +297,59 @@
     }
 
     buildTiles();
+
+    const runningSites = [
+        "Reeves Well Site",
+        "Park Well Site",
+        "Woods",
+        "Catawissa",
+        "New",
+        "Oakwood",
+        "Ray",
+        "Filter 1",
+        "Filter 2",
+        "Filter Plant"
+    ];
+
+    async function loadRunningStatuses() {
+        const response = await fetch("/api/maintenance/site-statuses");
+        const statuses = response.ok ? await response.json() : [];
+
+        const container = document.getElementById("statusChecks");
+        container.innerHTML = "";
+
+        runningSites.forEach(site => {
+            const saved = statuses.find(x => x.siteName === site);
+            const checked = saved?.isOn ? "checked" : "";
+
+            const div = document.createElement("div");
+            div.className = "status-check";
+
+            div.innerHTML = `
+                <label>
+                    <input type="checkbox" ${checked}
+                        onchange="saveRunningStatus('${site}', this.checked)" />
+                    ${site} ON
+                </label>
+            `;
+
+            container.appendChild(div);
+        });
+    }
+
+    async function saveRunningStatus(siteName, isOn) {
+        await fetch("/api/maintenance/site-status", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                siteName: siteName,
+                isOn: isOn
+            })
+        });
+    }
+
+    loadRunningStatuses();
+
 </script>
