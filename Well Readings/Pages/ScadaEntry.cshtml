@@ -1,12 +1,12 @@
-﻿@page
+@page
 @model Well_Readings.Pages.ScadaEntryModel
 
 <h1>Daily SCADA Entry</h1>
 
 <div class="entry-header">
     <label>Entry Date:</label>
-    <input type="date" id="entryDate" onchange="loadExistingEntry()" />
-    <button type="button" class="load-btn" onclick="loadExistingEntry()">Load Date</button>
+    <input type="date" id="entryDate" onchange="handleDateChange()" />
+    <button type="button" class="load-btn" onclick="handleDateChange()">Load Date</button>
 </div>
 
 <div id="lockedNotice" class="locked-notice" style="display:none;">
@@ -67,10 +67,16 @@
         gap: 15px;
         margin-bottom: 25px;
     }
-@media (max-width: 576px) {
-    .site-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+
+    @media (max-width: 576px) {
+        .site-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .site-tile {
+            padding: 12px;
+            font-size: 16px;
+        }
     }
 
     .site-tile {
@@ -421,24 +427,24 @@
     function toggleGroup(id) {
         const group = document.getElementById(id);
         if (!group) return;
+
         group.classList.toggle("collapsed");
     }
 
     function saveValueFromInput(input) {
-    const key = `${input.dataset.location}|${input.dataset.metric}|${input.dataset.source}`;
-    values[key] = input.value;
-    
-            // SAVE TO LOCAL STORAGE
-    localStorage.setItem(getStorageKey(), JSON.stringify(values));
+        const key = `${input.dataset.location}|${input.dataset.metric}|${input.dataset.source}`;
+        values[key] = input.value;
 
-    markTileStatus(input.dataset.site);
+        localStorage.setItem(getStorageKey(), JSON.stringify(values));
+
+        markTileStatus(input.dataset.site);
     }
 
     function getStorageKey() {
-    const date = document.getElementById("entryDate").value || "default";
-    return `scada-entry-${date}`;
+        const date = document.getElementById("entryDate").value || "default";
+        return `scada-entry-${date}`;
     }
-    
+
     function markTileStatus(siteName) {
         const site = sites.find(x => x.name === siteName);
         const tile = document.getElementById(`tile-${siteName}`);
@@ -482,6 +488,11 @@
         refreshAllTileStatuses();
     }
 
+    async function handleDateChange() {
+        await loadExistingEntry();
+        loadLocalDraft();
+    }
+
     async function loadExistingEntry() {
         const date = document.getElementById("entryDate").value;
 
@@ -514,6 +525,24 @@
 
         document.getElementById("message").innerText =
             entries.length > 0 ? "Existing entry loaded." : "No entry found for this date.";
+    }
+
+    function loadLocalDraft() {
+        const saved = localStorage.getItem(getStorageKey());
+
+        if (!saved) return;
+
+        const draft = JSON.parse(saved);
+
+        Object.assign(values, draft);
+
+        refreshAllTileStatuses();
+
+        if (currentSiteName) {
+            openSite(currentSiteName);
+        }
+
+        document.getElementById("message").innerText = "Draft restored.";
     }
 
     async function submitReadings() {
@@ -560,6 +589,7 @@
 
         if (existingEntries.length > 0) {
             const confirmOverwrite = confirm("This date already has readings. Submit anyway and overwrite that date?");
+
             if (!confirmOverwrite) return;
         }
 
@@ -583,28 +613,9 @@
             message.innerText = "Error saving readings.";
             message.style.color = "#b91c1c";
         }
-        function loadLocalDraft() {
-        const saved = localStorage.getItem(getStorageKey());
-
-        if (!saved) return;
-
-        const draft = JSON.parse(saved);
-
-        Object.assign(values, draft);
-
-        refreshAllTileStatuses();
-
-        if (currentSiteName) {
-            openSite(currentSiteName);
-        }
-
-        document.getElementById("message").innerText = "Draft restored.";
-    }
-
     }
 
     buildTiles();
     loadRunningStatuses();
-    loadExistingEntry();
-    loadLocalDraft();
+    handleDateChange();
 </script>
