@@ -9,6 +9,10 @@
     <button type="button" class="load-btn" onclick="handleDateChange()">Load Date</button>
 </div>
 
+<div id="draftNotice" class="draft-notice" style="display:none;">
+    Draft restored from this device.
+</div>
+
 <div id="lockedNotice" class="locked-notice" style="display:none;">
     This date already has saved readings. Submitting again will overwrite that date.
 </div>
@@ -23,7 +27,7 @@
 
 <style>
     .entry-header {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         color: #111827;
         display: flex;
         gap: 10px;
@@ -31,15 +35,15 @@
         flex-wrap: wrap;
     }
 
-        .entry-header label {
-            font-weight: bold;
-        }
+    .entry-header label {
+        font-weight: bold;
+    }
 
-        .entry-header input {
-            padding: 8px;
-            border: 1px solid #374151;
-            border-radius: 6px;
-        }
+    .entry-header input {
+        padding: 8px;
+        border: 1px solid #374151;
+        border-radius: 6px;
+    }
 
     .load-btn {
         padding: 8px 14px;
@@ -61,46 +65,45 @@
         font-weight: bold;
     }
 
-    .site-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 15px;
-        margin-bottom: 25px;
+    .draft-notice {
+        background: #dbeafe;
+        color: #1e3a8a;
+        padding: 12px;
+        border: 1px solid #60a5fa;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-weight: bold;
     }
 
-    @media (max-width: 576px) {
-        .site-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .site-tile {
-            padding: 12px;
-            font-size: 16px;
-        }
+    .site-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 25px;
     }
 
     .site-tile {
         background: #1f2937;
         color: white;
-        padding: 20px;
+        padding: 18px;
         border-radius: 10px;
         cursor: pointer;
         text-align: center;
-        font-size: 18px;
+        font-size: 17px;
         font-weight: bold;
     }
 
-        .site-tile:hover {
-            background: #2563eb;
-        }
+    .site-tile:hover {
+        background: #2563eb;
+    }
 
-        .site-tile.complete {
-            background: #2563eb;
-        }
+    .site-tile.complete {
+        background: #2563eb;
+    }
 
-        .site-tile.running {
-            background: #047857;
-        }
+    .site-tile.running {
+        background: #047857;
+    }
 
     .entry-panel {
         background: #f3f4f6;
@@ -110,11 +113,11 @@
         margin-bottom: 25px;
     }
 
-        .entry-panel h2,
-        .entry-panel h3,
-        .entry-panel label {
-            color: #111827;
-        }
+    .entry-panel h2,
+    .entry-panel h3,
+    .entry-panel label {
+        color: #111827;
+    }
 
     .entry-group {
         background: white;
@@ -138,28 +141,28 @@
         padding: 15px;
     }
 
-        .group-body.collapsed {
-            display: none;
-        }
+    .group-body.collapsed {
+        display: none;
+    }
 
     .field-row {
         margin-bottom: 12px;
     }
 
-        .field-row label {
-            display: inline-block;
-            width: 260px;
-            font-weight: bold;
-        }
+    .field-row label {
+        display: inline-block;
+        width: 260px;
+        font-weight: bold;
+    }
 
-        .field-row input {
-            padding: 8px;
-            width: 160px;
-            color: #111827;
-            background-color: #ffffff;
-            border: 1px solid #374151;
-            border-radius: 5px;
-        }
+    .field-row input {
+        padding: 8px;
+        width: 160px;
+        color: #111827;
+        background-color: #ffffff;
+        border: 1px solid #374151;
+        border-radius: 5px;
+    }
 
     .submit-btn {
         padding: 12px 24px;
@@ -177,13 +180,41 @@
         font-weight: bold;
         color: #111827;
     }
+
+    @@media (max-width: 700px) {
+        .site-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .site-tile {
+            padding: 12px 6px;
+            font-size: 13px;
+            min-height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .field-row label {
+            display: block;
+            width: auto;
+            margin-bottom: 4px;
+        }
+
+        .field-row input {
+            width: 100%;
+            max-width: 260px;
+            font-size: 18px;
+        }
+    }
 </style>
 
 <script>
     const sites = [
         {
             name: "Reeves Well Site",
-            displayName: "Reeves Well",
+            displayName: "Reeves",
             fields: [
                 { label: "Reeves Well Meter", location: "Reeves Well", metricType: "Meter Reading", sourceColumn: "Reeves Well" },
                 { label: "Reeves Well A Meter", location: "Reeves Well A", metricType: "Meter Reading", sourceColumn: "Reeves Well A" },
@@ -194,7 +225,7 @@
         },
         {
             name: "Park Well Site",
-            displayName: "Park Well",
+            displayName: "Park",
             fields: [
                 { label: "Park Well Meter", location: "Park Well", metricType: "Meter Reading", sourceColumn: "Park Well" },
                 { label: "Park Well A Meter", location: "Park Well A", metricType: "Meter Reading", sourceColumn: "Park Well A" },
@@ -256,7 +287,7 @@
         },
         {
             name: "Filter Plant",
-            displayName: "Filter Plant",
+            displayName: "Filter",
             groups: [
                 {
                     title: "Filter 1",
@@ -298,7 +329,7 @@
         },
         {
             name: "Pump Stations",
-            displayName: "Pump Stations",
+            displayName: "Pumps",
             groups: [
                 {
                     title: "Beaver Creek",
@@ -339,6 +370,40 @@
     let runningStatuses = {};
 
     document.getElementById("entryDate").valueAsDate = new Date();
+
+    function storageKey() {
+        const date = document.getElementById("entryDate").value || "no-date";
+        return `scada-entry-draft-${date}`;
+    }
+
+    function saveDraft() {
+        localStorage.setItem(storageKey(), JSON.stringify(values));
+    }
+
+    function loadDraft() {
+        document.getElementById("draftNotice").style.display = "none";
+
+        const saved = localStorage.getItem(storageKey());
+
+        if (!saved) return;
+
+        try {
+            const draft = JSON.parse(saved);
+
+            Object.keys(draft).forEach(key => {
+                values[key] = draft[key];
+            });
+
+            document.getElementById("draftNotice").style.display = "block";
+        } catch {
+            localStorage.removeItem(storageKey());
+        }
+    }
+
+    function clearDraft() {
+        localStorage.removeItem(storageKey());
+        document.getElementById("draftNotice").style.display = "none";
+    }
 
     function keyFor(field) {
         return `${field.location}|${field.metricType}|${field.sourceColumn}`;
@@ -427,7 +492,6 @@
     function toggleGroup(id) {
         const group = document.getElementById(id);
         if (!group) return;
-
         group.classList.toggle("collapsed");
     }
 
@@ -435,14 +499,8 @@
         const key = `${input.dataset.location}|${input.dataset.metric}|${input.dataset.source}`;
         values[key] = input.value;
 
-        localStorage.setItem(getStorageKey(), JSON.stringify(values));
-
+        saveDraft();
         markTileStatus(input.dataset.site);
-    }
-
-    function getStorageKey() {
-        const date = document.getElementById("entryDate").value || "default";
-        return `scada-entry-${date}`;
     }
 
     function markTileStatus(siteName) {
@@ -490,7 +548,6 @@
 
     async function handleDateChange() {
         await loadExistingEntry();
-        loadLocalDraft();
     }
 
     async function loadExistingEntry() {
@@ -502,47 +559,27 @@
 
         const response = await fetch(`/api/scada/entry-by-date?date=${date}`);
 
-        if (!response.ok) {
-            document.getElementById("message").innerText = "Error loading selected date.";
-            return;
+        if (response.ok) {
+            const entries = await response.json();
+
+            entries.forEach(item => {
+                const key = `${item.location}|${item.metricType}|${item.sourceColumn}`;
+                values[key] = item.value;
+            });
+
+            document.getElementById("lockedNotice").style.display =
+                entries.length > 0 ? "block" : "none";
+
+            document.getElementById("message").innerText =
+                entries.length > 0 ? "Existing entry loaded." : "No entry found for this date.";
         }
 
-        const entries = await response.json();
-
-        entries.forEach(item => {
-            const key = `${item.location}|${item.metricType}|${item.sourceColumn}`;
-            values[key] = item.value;
-        });
-
-        document.getElementById("lockedNotice").style.display =
-            entries.length > 0 ? "block" : "none";
-
+        loadDraft();
         refreshAllTileStatuses();
 
         if (currentSiteName) {
             openSite(currentSiteName);
         }
-
-        document.getElementById("message").innerText =
-            entries.length > 0 ? "Existing entry loaded." : "No entry found for this date.";
-    }
-
-    function loadLocalDraft() {
-        const saved = localStorage.getItem(getStorageKey());
-
-        if (!saved) return;
-
-        const draft = JSON.parse(saved);
-
-        Object.assign(values, draft);
-
-        refreshAllTileStatuses();
-
-        if (currentSiteName) {
-            openSite(currentSiteName);
-        }
-
-        document.getElementById("message").innerText = "Draft restored.";
     }
 
     async function submitReadings() {
@@ -589,7 +626,6 @@
 
         if (existingEntries.length > 0) {
             const confirmOverwrite = confirm("This date already has readings. Submit anyway and overwrite that date?");
-
             if (!confirmOverwrite) return;
         }
 
@@ -604,11 +640,11 @@
         const message = document.getElementById("message");
 
         if (response.ok) {
+            clearDraft();
             message.innerText = "Readings saved successfully.";
             message.style.color = "#047857";
             document.getElementById("lockedNotice").style.display = "block";
             refreshAllTileStatuses();
-            localStorage.removeItem(getStorageKey());
         } else {
             message.innerText = "Error saving readings.";
             message.style.color = "#b91c1c";
@@ -617,5 +653,5 @@
 
     buildTiles();
     loadRunningStatuses();
-    handleDateChange();
+    loadExistingEntry();
 </script>
