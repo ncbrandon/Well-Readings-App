@@ -22,17 +22,18 @@ namespace Well_Readings.Controllers
         {
             var meterColumns = new[]
             {
-                "Reeves Well",
-                "Reeves Well A",
-                "Park Well",
-                "Park Well A",
-                "Park Well B",
-                "Woods",
-                "Catawissa",
-                "New",
-                "Oakwood",
-                "Ray"
-            };
+        "Reeves Well",
+        "Reeves Well A",
+        "Park Well",
+        "Park Well A",
+        "Park Well B",
+        "Woods",
+        "Catawissa",
+        "New",
+        "Oakwood",
+        "Ray",
+        "Filter Plant"
+    };
 
             var wells = new List<object>();
 
@@ -58,6 +59,37 @@ namespace Well_Readings.Controllers
                 });
             }
 
+            var pumpNames = new[]
+            {
+        "Beaver Creek Pump 1",
+        "Beaver Creek Pump 2",
+        "Beaver Creek Generator",
+        "Greenfield Pump 1",
+        "Greenfield Pump 2",
+        "Greenfield Generator",
+        "Helen Blevins Pump 1",
+        "Helen Blevins Pump 2",
+        "Dogget Pump 1",
+        "Dogget Pump 2"
+    };
+
+            var pumpStations = new List<object>();
+
+            foreach (var pump in pumpNames)
+            {
+                var latest = await _context.ScadaHistoryPoints
+                    .Where(x => x.Location == pump)
+                    .OrderByDescending(x => x.Timestamp)
+                    .FirstOrDefaultAsync();
+
+                pumpStations.Add(new
+                {
+                    name = pump,
+                    hours = latest?.Value ?? 0,
+                    lastUpdated = latest?.Timestamp
+                });
+            }
+
             var plant = new
             {
                 flowRate = await GetLatestValue("Filter Plant", "Feed Flow"),
@@ -67,7 +99,12 @@ namespace Well_Readings.Controllers
                 temperature = await GetLatestValue("Filter Plant", "Temperature")
             };
 
-            return Ok(new { wells, plant });
+            return Ok(new
+            {
+                wells,
+                pumpStations,
+                plant
+            });
         }
 
         [HttpPost("import-excel")]
