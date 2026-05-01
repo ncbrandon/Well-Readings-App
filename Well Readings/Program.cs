@@ -112,13 +112,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
+app.UseRouting();
 app.UseAuthorization();
 
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.MapControllers();
-app.UseRouting();
+
 app.MapRazorPages();
 app.MapHub<ScadaHub>("/hubs/scada");
 app.MapHub<Well_Readings.Hubs.ScadaHub>("/ScadaHub");
