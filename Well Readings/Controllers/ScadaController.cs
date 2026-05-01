@@ -77,16 +77,35 @@ namespace Well_Readings.Controllers
 
             foreach (var pump in pumpNames)
             {
-                var latest = await _context.ScadaHistoryPoints
-                    .Where(x => x.Location == pump)
+                var today = DateTime.Today;
+
+                var latestToday = await _context.ScadaHistoryPoints
+                    .Where(x => x.Location == pump && x.Timestamp.Date == today)
                     .OrderByDescending(x => x.Timestamp)
                     .FirstOrDefaultAsync();
+
+                var previous = await _context.ScadaHistoryPoints
+                    .Where(x => x.Location == pump && x.Timestamp < today)
+                    .OrderByDescending(x => x.Timestamp)
+                    .FirstOrDefaultAsync();
+
+                decimal hoursPumpedToday = 0;
+
+                if (latestToday?.Value != null && previous?.Value != null)
+                {
+                    hoursPumpedToday = latestToday.Value.Value - previous.Value.Value;
+
+                    if (hoursPumpedToday < 0)
+                        hoursPumpedToday = 0;
+                }
 
                 pumpStations.Add(new
                 {
                     name = pump,
-                    hours = latest?.Value ?? 0,
-                    lastUpdated = latest?.Timestamp
+                    hours = hoursPumpedToday,
+                    lastReading = latestToday?.Value ?? 0,
+                    previousReading = previous?.Value ?? 0,
+                    lastUpdated = latestToday?.Timestamp
                 });
             }
 
