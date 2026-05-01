@@ -420,11 +420,20 @@
     }
 
     function saveValueFromInput(input) {
-        const key = `${input.dataset.location}|${input.dataset.metric}|${input.dataset.source}`;
-        values[key] = input.value;
-        markTileStatus(input.dataset.site);
+    const key = `${input.dataset.location}|${input.dataset.metric}|${input.dataset.source}`;
+    values[key] = input.value;
+    
+            // SAVE TO LOCAL STORAGE
+    localStorage.setItem(getStorageKey(), JSON.stringify(values));
+
+    markTileStatus(input.dataset.site);
     }
 
+    function getStorageKey() {
+    const date = document.getElementById("entryDate").value || "default";
+    return `scada-entry-${date}`;
+    }
+    
     function markTileStatus(siteName) {
         const site = sites.find(x => x.name === siteName);
         const tile = document.getElementById(`tile-${siteName}`);
@@ -564,13 +573,33 @@
             message.style.color = "#047857";
             document.getElementById("lockedNotice").style.display = "block";
             refreshAllTileStatuses();
+            localStorage.removeItem(getStorageKey());
         } else {
             message.innerText = "Error saving readings.";
             message.style.color = "#b91c1c";
         }
+        function loadLocalDraft() {
+        const saved = localStorage.getItem(getStorageKey());
+
+        if (!saved) return;
+
+        const draft = JSON.parse(saved);
+
+        Object.assign(values, draft);
+
+        refreshAllTileStatuses();
+
+        if (currentSiteName) {
+            openSite(currentSiteName);
+        }
+
+        document.getElementById("message").innerText = "Draft restored.";
+    }
+
     }
 
     buildTiles();
     loadRunningStatuses();
     loadExistingEntry();
+    loadLocalDraft();
 </script>
