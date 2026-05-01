@@ -1,11 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY ["WellReadings.csproj", "./"]
-RUN dotnet restore "WellReadings.csproj"
-
 COPY . .
-RUN dotnet publish "WellReadings.csproj" -c Release -o /app/publish
+
+RUN dotnet restore "Well Readings.csproj"
+RUN dotnet publish "Well Readings.csproj" -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
