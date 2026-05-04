@@ -1,0 +1,83 @@
+﻿@page
+@model Well_Readings.Pages.ExcelImportModel
+
+<h1>Excel Import</h1>
+
+<p>
+    Upload your Google Sheet / Excel file. This will import readings into the database.
+</p>
+
+<div class="import-box">
+    <input type="file" id="excelFile" accept=".xlsx" />
+    <button type="button" onclick="uploadExcel()">Import Excel</button>
+</div>
+
+<div id="result" class="result"></div>
+
+<style>
+    .import-box {
+        background: #f3f4f6;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+        .import-box input {
+            margin-right: 12px;
+        }
+
+        .import-box button {
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+    .result {
+        font-weight: bold;
+        color: #111827;
+        white-space: pre-line;
+    }
+</style>
+
+<script>
+    async function uploadExcel() {
+        const fileInput = document.getElementById("excelFile");
+        const result = document.getElementById("result");
+
+        if (!fileInput.files.length) {
+            alert("Please choose an Excel file first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        result.innerText = "Importing...";
+
+        const response = await fetch("/api/excel-import/scada", {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            result.style.color = "#b91c1c";
+            result.innerText = "Import failed:\n" + errorText;
+            return;
+        }
+
+        const data = await response.json();
+
+        result.style.color = "#047857";
+        result.innerText =
+            "Import complete.\n\n" +
+            "Sheet: " + data.sheet + "\n" +
+            "Imported: " + data.imported + "\n" +
+            "Updated: " + data.updated + "\n" +
+            "Skipped rows: " + data.skipped;
+    }
+</script>
