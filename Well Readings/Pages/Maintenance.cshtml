@@ -6,7 +6,6 @@
 <section class="maintenance-status-section">
     <h2>Site Running Status</h2>
     <p>Check sites that are currently ON.</p>
-
     <div id="statusChecks" class="status-check-grid"></div>
 </section>
 
@@ -36,20 +35,20 @@
         border: 2px solid transparent;
     }
 
-        .site-tile.need-chlorine {
-            background: #fde047;
-            color: #111827;
-        }
+    .site-tile.need-chlorine {
+        background: #fde047;
+        color: #111827;
+    }
 
-        .site-tile.need-phosphate {
-            background: #93c5fd;
-            color: #111827;
-        }
+    .site-tile.need-phosphate {
+        background: #93c5fd;
+        color: #111827;
+    }
 
-        .site-tile.need-both {
-            background: linear-gradient(to right, #fde047 0%, #fde047 50%, #93c5fd 50%, #93c5fd 100%);
-            color: #111827;
-        }
+    .site-tile.need-both {
+        background: linear-gradient(to right, #fde047 0%, #fde047 50%, #93c5fd 50%, #93c5fd 100%);
+        color: #111827;
+    }
 
     .maintenance-panel {
         background: #f3f4f6;
@@ -59,11 +58,11 @@
         margin-bottom: 25px;
     }
 
-        .maintenance-panel h2,
-        .maintenance-panel h3,
-        .maintenance-panel label {
-            color: #111827;
-        }
+    .maintenance-panel h2,
+    .maintenance-panel h3,
+    .maintenance-panel label {
+        color: #111827;
+    }
 
     .check-row,
     .date-row {
@@ -71,23 +70,23 @@
         font-weight: bold;
     }
 
-        .check-row input {
-            margin-right: 10px;
-            transform: scale(1.2);
-        }
+    .check-row input {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
 
-        .date-row label {
-            display: inline-block;
-            width: 230px;
-        }
+    .date-row label {
+        display: inline-block;
+        width: 230px;
+    }
 
-        .date-row input {
-            padding: 8px;
-            color: #111827;
-            background: white;
-            border: 1px solid #374151;
-            border-radius: 5px;
-        }
+    .date-row input {
+        padding: 8px;
+        color: #111827;
+        background: white;
+        border: 1px solid #374151;
+        border-radius: 5px;
+    }
 
     .save-btn {
         padding: 10px 20px;
@@ -129,11 +128,10 @@
         font-weight: bold;
     }
 
-        .status-check input {
-            margin-right: 8px;
-            transform: scale(1.2);
-        }
-
+    .status-check input {
+        margin-right: 8px;
+        transform: scale(1.2);
+    }
 </style>
 
 <script>
@@ -149,23 +147,86 @@
         "Pump Stations"
     ];
 
+    const runningSites = [
+        "Reeves Well Site",
+        "Park Well Site",
+        "Woods",
+        "Catawissa",
+        "New",
+        "Oakwood",
+        "Ray",
+        "Filter 1",
+        "Filter 2",
+        "Filter Plant"
+    ];
+
     const maintenanceState = {};
+
+    function defaultState(siteName) {
+        return {
+            siteName: siteName,
+            isOn: false,
+            needChlorine: false,
+            needPhosphate: false,
+            needInjector: false,
+            needChemicalPump: false
+        };
+    }
+
+    async function loadSavedMaintenance() {
+        const response = await fetch("/api/maintenance/site-statuses");
+        const statuses = response.ok ? await response.json() : [];
+
+        [...new Set([...sites, ...runningSites])].forEach(site => {
+            const saved = statuses.find(x => x.siteName === site);
+
+            maintenanceState[site] = {
+                siteName: site,
+                isOn: saved?.isOn || false,
+                needChlorine: saved?.needChlorine || false,
+                needPhosphate: saved?.needPhosphate || false,
+                needInjector: saved?.needInjector || false,
+                needChemicalPump: saved?.needChemicalPump || false
+            };
+        });
+
+        buildRunningStatusChecks();
+        buildTiles();
+    }
+
+    function buildRunningStatusChecks() {
+        const container = document.getElementById("statusChecks");
+        container.innerHTML = "";
+
+        runningSites.forEach(site => {
+            const state = maintenanceState[site] || defaultState(site);
+            const checked = state.isOn ? "checked" : "";
+
+            const div = document.createElement("div");
+            div.className = "status-check";
+
+            div.innerHTML = `
+                <label>
+                    <input type="checkbox" ${checked}
+                        onchange="updateRunningStatus('${site}', this.checked)" />
+                    ${site} ON
+                </label>
+            `;
+
+            container.appendChild(div);
+        });
+    }
 
     function buildTiles() {
         const container = document.getElementById("siteTiles");
         container.innerHTML = "";
 
         sites.forEach(site => {
-            maintenanceState[site] = maintenanceState[site] || {
-                needChlorine: false,
-                needPhosphate: false,
-                needInjector: false,
-                needChemicalPump: false
-            };
+            maintenanceState[site] = maintenanceState[site] || defaultState(site);
 
             const div = document.createElement("div");
             div.className = "site-tile";
-            div.id = `tile-${site}`;
+            div.id = `tile-${safeId(site)}`;
             div.innerText = site;
             div.onclick = () => openSite(site);
 
@@ -175,6 +236,8 @@
     }
 
     function openSite(site) {
+        maintenanceState[site] = maintenanceState[site] || defaultState(site);
+
         const panel = document.getElementById("maintenancePanel");
         const state = maintenanceState[site];
 
@@ -188,7 +251,7 @@
             <div class="check-row">
                 <label>
                     <input type="checkbox" ${state.needChlorine ? "checked" : ""}
-                        onchange="updateCheck('${site}', 'needChlorine', this.checked)" />
+                        onchange="updateNeedCheck('${site}', 'needChlorine', this.checked)" />
                     Need Chlorine
                 </label>
             </div>
@@ -196,7 +259,7 @@
             <div class="check-row">
                 <label>
                     <input type="checkbox" ${state.needPhosphate ? "checked" : ""}
-                        onchange="updateCheck('${site}', 'needPhosphate', this.checked)" />
+                        onchange="updateNeedCheck('${site}', 'needPhosphate', this.checked)" />
                     Need Phosphate
                 </label>
             </div>
@@ -204,7 +267,7 @@
             <div class="check-row">
                 <label>
                     <input type="checkbox" ${state.needInjector ? "checked" : ""}
-                        onchange="updateCheck('${site}', 'needInjector', this.checked)" />
+                        onchange="updateNeedCheck('${site}', 'needInjector', this.checked)" />
                     Need Injector
                 </label>
             </div>
@@ -212,7 +275,7 @@
             <div class="check-row">
                 <label>
                     <input type="checkbox" ${state.needChemicalPump ? "checked" : ""}
-                        onchange="updateCheck('${site}', 'needChemicalPump', this.checked)" />
+                        onchange="updateNeedCheck('${site}', 'needChemicalPump', this.checked)" />
                     Need Chemical Pump
                 </label>
             </div>
@@ -239,28 +302,41 @@
         `;
     }
 
-    async function updateCheck(site, field, checked) {
-    maintenanceState[site][field] = checked;
-    updateTileColor(site);
+    async function updateRunningStatus(site, checked) {
+        maintenanceState[site] = maintenanceState[site] || defaultState(site);
+        maintenanceState[site].isOn = checked;
+        await saveMaintenanceStatus(site);
+    }
 
-    await fetch("/api/maintenance/site-status", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            siteName: site,
-            isOn: false,
-            needChlorine: maintenanceState[site].needChlorine,
-            needPhosphate: maintenanceState[site].needPhosphate,
-            needInjector: maintenanceState[site].needInjector,
-            needChemicalPump: maintenanceState[site].needChemicalPump
-        })
-    });
-}
+    async function updateNeedCheck(site, field, checked) {
+        maintenanceState[site] = maintenanceState[site] || defaultState(site);
+        maintenanceState[site][field] = checked;
+
+        updateTileColor(site);
+        await saveMaintenanceStatus(site);
+    }
+
+    async function saveMaintenanceStatus(site) {
+        const state = maintenanceState[site] || defaultState(site);
+
+        await fetch("/api/maintenance/site-status", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                siteName: site,
+                isOn: state.isOn,
+                needChlorine: state.needChlorine,
+                needPhosphate: state.needPhosphate,
+                needInjector: state.needInjector,
+                needChemicalPump: state.needChemicalPump
+            })
+        });
+    }
 
     function updateTileColor(site) {
-        const tile = document.getElementById(`tile-${site}`);
+        const tile = document.getElementById(`tile-${safeId(site)}`);
         const state = maintenanceState[site];
 
         if (!tile || !state) return;
@@ -311,68 +387,5 @@
         return value.replaceAll(" ", "-").replaceAll(".", "").replaceAll("/", "-");
     }
 
-    buildTiles();
-
-    const runningSites = [
-        "Reeves Well Site",
-        "Park Well Site",
-        "Woods",
-        "Catawissa",
-        "New",
-        "Oakwood",
-        "Ray",
-        "Filter 1",
-        "Filter 2",
-        "Filter Plant"
-    ];
-
-    async function loadRunningStatuses() {
-        const response = await fetch("/api/maintenance/site-statuses");
-        const statuses = response.ok ? await response.json() : [];
-
-        const container = document.getElementById("statusChecks");
-        container.innerHTML = "";
-
-       runningSites.forEach(site => {
-    const saved = statuses.find(x => x.siteName === site);
-    const checked = saved?.isOn ? "checked" : "";
-
-    // ✅ ADD THIS BLOCK HERE
-    maintenanceState[site] = {
-        needChlorine: saved?.needChlorine || false,
-        needPhosphate: saved?.needPhosphate || false,
-        needInjector: saved?.needInjector || false,
-        needChemicalPump: saved?.needChemicalPump || false
-    };
-
-    const div = document.createElement("div");
-    div.className = "status-check";
-
-    div.innerHTML = `
-        <label>
-            <input type="checkbox" ${checked}
-                onchange="saveRunningStatus('${site}', this.checked)" />
-            ${site} ON
-        </label>
-    `;
-
-    container.appendChild(div);
-});
-    }
-
-    async function saveRunningStatus(siteName, isOn) {
-        await fetch("/api/maintenance/site-status", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                siteName: siteName,
-                isOn: isOn
-            })
-        });
-    }
-
-    loadRunningStatuses();
-
+    loadSavedMaintenance();
 </script>

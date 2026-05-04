@@ -81,6 +81,43 @@
     </div>
 </section>
 
+<hr />
+
+<section class="report-section">
+    <h2>Pump Station Report</h2>
+
+    <div class="report-controls">
+        <label>Pump Station:</label>
+        <select id="pumpStationSelect">
+            <option value="Beaver Creek">Beaver Creek</option>
+            <option value="Greenfield">Greenfield</option>
+            <option value="Helen Blevins">Helen Blevins</option>
+            <option value="Dogget">Dogget</option>
+        </select>
+
+        <label>Beginning Date:</label>
+        <input type="date" id="pumpStartDate" />
+
+        <label>Ending Date:</label>
+        <input type="date" id="pumpEndDate" />
+
+        <button type="button" onclick="loadPumpStationReport()">Run Pump Station Report</button>
+    </div>
+
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Date / Time</th>
+                <th>Station</th>
+                <th>Pump</th>
+                <th>Reading Entered</th>
+                <th>Hours Run</th>
+            </tr>
+        </thead>
+        <tbody id="pumpStationReportBody"></tbody>
+    </table>
+</section>
+
 <style>
     .report-card {
         background: #f3f4f6;
@@ -320,4 +357,42 @@
             maximumFractionDigits: 0
         });
     }
+
+        async function loadPumpStationReport() {
+        const station = document.getElementById("pumpStationSelect").value;
+        const startDate = document.getElementById("pumpStartDate").value;
+        const endDate = document.getElementById("pumpEndDate").value;
+
+        if (!startDate || !endDate) {
+            alert("Please choose a beginning and ending date.");
+            return;
+        }
+
+        const response = await fetch(`/api/scada/pump-station-report?station=${encodeURIComponent(station)}&startDate=${startDate}&endDate=${endDate}`);
+
+        const body = document.getElementById("pumpStationReportBody");
+        body.innerHTML = "";
+
+        if (!response.ok) {
+            body.innerHTML = `<tr><td colspan="5">Error loading pump station report.</td></tr>`;
+            return;
+        }
+
+        const rows = await response.json();
+
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${new Date(row.date).toLocaleString([], { hour12: false })}</td>
+                <td>${row.station}</td>
+                <td>${row.pump}</td>
+                <td>${row.reading}</td>
+                <td>${row.hoursRun}</td>
+            `;
+
+            body.appendChild(tr);
+        });
+    }
+
 </script>

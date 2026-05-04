@@ -531,6 +531,72 @@ namespace Well_Readings.Controllers
             return Ok(report);
         }
 
+        [HttpGet("pump-station-report")]
+        public async Task<IActionResult> GetPumpStationReport(string station, DateTime startDate, DateTime endDate)
+        {
+            endDate = endDate.Date.AddDays(1).AddTicks(-1);
+
+            var pumpNames = station switch
+            {
+                "Beaver Creek" => new[] { "Beaver Creek Pump 1", "Beaver Creek Pump 2", "Beaver Creek Generator" },
+                "Greenfield" => new[] { "Greenfield Pump 1", "Greenfield Pump 2", "Greenfield Generator" },
+                "Helen Blevins" => new[] { "Helen Blevins Pump 1", "Helen Blevins Pump 2" },
+                "Dogget" => new[] { "Dogget Pump 1", "Dogget Pump 2" },
+                _ => Array.Empty<string>()
+            };
+
+            if (!pumpNames.Any())
+                return BadRequest("Invalid pump station.");
+
+            var allPoints = await _context.ScadaHistoryPoints
+                .Where(x => pumpNames.Contains(x.Location) && x.Timestamp <= endDate)
+                .OrderBy(x => x.Timestamp)
+                .ToListAsync();
+
+            var rows = new List<object>();
+
+            foreach (var pump in pumpNames)
+            {
+                var pumpPoints = allPoints
+                    .Where(x => x.Location == pump)
+                    .OrderBy(x => x.Timestamp)
+                    .ToList();
+
+                var reportPoints = pumpPoints
+                    .Where(x => x.Timestamp.Date >= startDate.Date && x.Timestamp.Date <= endDate.Date)
+                    .ToList();
+
+                foreach (var current in reportPoints)
+                {
+                    var previous = pumpPoints
+                        .Where(x => x.Timestamp < current.Timestamp)
+                        .OrderByDescending(x => x.Timestamp)
+                        .FirstOrDefault();
+
+                    decimal hoursRun = 0;
+
+                    if (current.Value.HasValue && previous?.Value != null)
+                    {
+                        hoursRun = current.Value.Value - previous.Value.Value;
+
+                        if (hoursRun < 0)
+                            hoursRun = 0;
+                    }
+
+                    rows.Add(new
+                    {
+                        date = current.Timestamp,
+                        station,
+                        pump,
+                        reading = current.Value ?? 0,
+                        hoursRun
+                    });
+                }
+            }
+
+            return Ok(rows.OrderBy(x => x.GetType().GetProperty("date")!.GetValue(x)).ToList());
+        }
+
         [HttpGet("history")]
         public async Task<IActionResult> GetHistory(int days = 7)
         {
