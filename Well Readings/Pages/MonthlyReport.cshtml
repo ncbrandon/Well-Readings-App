@@ -118,6 +118,38 @@
     </table>
 </section>
 
+<hr />
+
+<section class="report-section">
+    <h2>NC MOR Autofill Report</h2>
+
+    <div class="report-controls">
+        <label>Site:</label>
+        <select id="ncMorSite">
+            <option value="Reeves Well Site">Reeves Well Site</option>
+            <option value="Park Well Site">Park Well Site</option>
+            <option value="Woods">Woods</option>
+            <option value="Catawissa">Catawissa</option>
+            <option value="New">New</option>
+            <option value="Oakwood">Oakwood</option>
+            <option value="Ray">Ray</option>
+            <option value="Filter Plant">Filter Plant</option>
+        </select>
+
+        <label>Beginning Date:</label>
+        <input type="date" id="ncMorStartDate" />
+
+        <label>Ending Date:</label>
+        <input type="date" id="ncMorEndDate" />
+
+        <button type="button" onclick="generateNcMorScript()">Generate NC MOR Script</button>
+    </div>
+
+    <textarea id="ncMorScript" style="width:100%;height:300px;margin-top:15px;"></textarea>
+
+    <button type="button" onclick="copyNcMorScript()">Copy Script</button>
+</section>
+
 <style>
     .report-card {
         background: #f3f4f6;
@@ -393,6 +425,60 @@
 
             body.appendChild(tr);
         });
+    }
+
+        async function generateNcMorScript() {
+        const site = document.getElementById("ncMorSite").value;
+        const startDate = document.getElementById("ncMorStartDate").value;
+        const endDate = document.getElementById("ncMorEndDate").value;
+
+        if (!startDate || !endDate) {
+            alert("Please choose beginning and ending dates.");
+            return;
+        }
+
+        const response = await fetch(`/api/scada/nc-mor-report?site=${encodeURIComponent(site)}&startDate=${startDate}&endDate=${endDate}`);
+
+        if (!response.ok) {
+            alert("Error loading NC MOR data.");
+            return;
+        }
+
+        const data = await response.json();
+
+        const script = `
+    function setNcValue(el, value) {
+        if (!el || value === null || value === undefined || value === "") return;
+
+        el.focus();
+        el.value = value;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        el.blur();
+    }
+
+    const data = ${JSON.stringify(data, null, 4)};
+
+    data.forEach((row, index) => {
+        const rowIndex = (index + 2).toString().padStart(2, "0");
+
+        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`), row.time);
+        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`), Math.round(row.gallons));
+        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`), row.chlorine);
+        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`), row.phosphate);
+    });
+
+    console.log("NC MOR autofill complete.");
+    `;
+
+        document.getElementById("ncMorScript").value = script;
+    }
+
+    function copyNcMorScript() {
+        const box = document.getElementById("ncMorScript");
+        box.select();
+        document.execCommand("copy");
+        alert("NC MOR script copied.");
     }
 
 </script>

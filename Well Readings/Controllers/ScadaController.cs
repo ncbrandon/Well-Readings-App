@@ -621,6 +621,129 @@ namespace Well_Readings.Controllers
             return Ok(history);
         }
 
+        [HttpGet("nc-mor-report")]
+        public async Task<IActionResult> GetNcMorReport(string site, DateTime startDate, DateTime endDate)
+        {
+            var siteConfig = site switch
+            {
+                "Reeves Well Site" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "Reeves Well", "Reeves Well A" },
+                    ChemistryLocation = "Reeves Well Site"
+                },
+                "Park Well Site" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "Park Well", "Park Well A", "Park Well B" },
+                    ChemistryLocation = "Park Well Site"
+                },
+                "Woods" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "Woods" },
+                    ChemistryLocation = "Woods"
+                },
+                "Catawissa" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "Catawissa" },
+                    ChemistryLocation = "Catawissa"
+                },
+                "New" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "New" },
+                    ChemistryLocation = "New"
+                },
+                "Oakwood" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "Oakwood" },
+                    ChemistryLocation = "Oakwood"
+                },
+                "Ray" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "Ray" },
+                    ChemistryLocation = "Ray"
+                },
+                "Filter Plant" => new
+                {
+                    SiteName = site,
+                    Meters = new[] { "Filter Plant" },
+                    ChemistryLocation = "Filter Plant"
+                },
+                _ => null
+            };
+
+            if (siteConfig == null)
+                return BadRequest("Invalid site.");
+
+            var rows = new List<object>();
+
+            for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
+            {
+                decimal gallons = 0;
+                DateTime? latestTime = null;
+
+                foreach (var meter in siteConfig.Meters)
+                {
+                    var current = await _context.ScadaHistoryPoints
+                        .Where(x => x.Location == meter &&
+                                    x.MetricType == "Meter Reading" &&
+                                    x.Timestamp.Date == date)
+                        .OrderByDescending(x => x.Timestamp)
+                        .FirstOrDefaultAsync();
+
+                    var previous = await _context.ScadaHistoryPoints
+                        .Where(x => x.Location == meter &&
+                                    x.MetricType == "Meter Reading" &&
+                                    x.Timestamp < date)
+                        .OrderByDescending(x => x.Timestamp)
+                        .FirstOrDefaultAsync();
+
+                    if (current?.Value != null && previous?.Value != null)
+                    {
+                        var delta = current.Value.Value - previous.Value.Value;
+                        if (delta > 0)
+                            gallons += delta;
+
+                        if (latestTime == null || current.Timestamp > latestTime)
+                            latestTime = current.Timestamp;
+                    }
+                }
+
+                var chlorine = await _context.ScadaHistoryPoints
+                    .Where(x => x.Location == siteConfig.ChemistryLocation &&
+                                x.MetricType == "Chlorine" &&
+                                x.Timestamp.Date == date)
+                    .OrderByDescending(x => x.Timestamp)
+                    .Select(x => x.Value)
+                    .FirstOrDefaultAsync();
+
+                var phosphate = await _context.ScadaHistoryPoints
+                    .Where(x => x.Location == siteConfig.ChemistryLocation &&
+                                x.MetricType == "Phosphate" &&
+                                x.Timestamp.Date == date)
+                    .OrderByDescending(x => x.Timestamp)
+                    .Select(x => x.Value)
+                    .FirstOrDefaultAsync();
+
+                rows.Add(new
+                {
+                    date = date.ToString("MM/dd/yyyy"),
+                    time = latestTime?.ToString("HH:mm") ?? "",
+                    gallons,
+                    chlorine,
+                    phosphate
+                });
+            }
+
+            return Ok(rows);
+        }
+
+
         private async Task<decimal> GetLatestValue(string location, string metricType)
         {
             return await _context.ScadaHistoryPoints
