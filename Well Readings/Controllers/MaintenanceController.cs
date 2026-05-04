@@ -84,6 +84,10 @@ namespace Well_Readings.Controllers
             else
             {
                 existing.IsOn = request.IsOn;
+                existing.NeedChlorine = request.NeedChlorine;
+                existing.NeedPhosphate = request.NeedPhosphate;
+                existing.NeedInjector = request.NeedInjector;
+                existing.NeedChemicalPump = request.NeedChemicalPump;   
                 existing.UpdatedAt = DateTime.Now;
             }
 

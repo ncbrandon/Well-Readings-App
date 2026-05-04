@@ -1,8 +1,6 @@
 ﻿@page
 @model Well_Readings.Pages.ScadaModel
 
-<h1 class="title">SCADA Control Room</h1>
-
 <div class="kpi-row">
     <div class="kpi">
         <div class="kpi-label">Wells</div>
@@ -10,37 +8,19 @@
     </div>
 
     <div class="kpi">
-        <div class="kpi-label">Total Flow</div>
-        <div class="kpi-value" id="totalFlow">0</div>
+        <div class="kpi-label">Pumped Yesterday</div>
+        <div class="kpi-value" id="pumpedYesterday">0</div>
+    </div>
+
+    <div class="kpi">
+        <div class="kpi-label">Pumped Today</div>
+        <div class="kpi-value" id="pumpedToday">0</div>
     </div>
 
     <div class="kpi">
         <div class="kpi-label">Active Alarms</div>
         <div class="kpi-value" id="alarmCount">0</div>
     </div>
-    <div class="kpi">
-        <div class="kpi-label">Plant Flow</div>
-        <div class="kpi-value" id="plantFlow">0</div>
-    </div>
-
-    <div class="kpi">
-        <div class="kpi-label">Plant pH</div>
-        <div class="kpi-value" id="plantPh">0</div>
-    </div>
-
-</div>
-
-<div class="panel">
-    <h3>Playback Control</h3>
-
-    <button onclick="toggleMode()">Toggle Live / Playback</button>
-
-    <input type="range" id="timeline" min="0" max="100" value="0" />
-
-    <button onclick="play()">▶ Play</button>
-    <button onclick="pause()">⏸ Pause</button>
-
-    <span id="timeLabel"></span>
 </div>
 
 <div class="panel">
@@ -53,41 +33,41 @@
     <div class="well-grid" id="pumpGrid"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<style>
+    .flash-red {
+        animation: flashRed 1s infinite;
+    }
+
+    @@keyframes flashRed {
+        0%
+
+    {
+        background-color: #7f1d1d;
+    }
+
+    50% {
+        background-color: #dc2626;
+    }
+
+    100% {
+        background-color: #7f1d1d;
+    }
+
+    }
+</style>
 
 <script>
-    let liveMode = true;
-    let historyData = [];
-    let currentIndex = 0;
-    let playing = false;
-    let timer = null;
-
-    /* =========================
-       LIVE MODE
-    ========================= */
-
     async function loadScada() {
         const res = await fetch('/api/scada/dashboard');
         const data = await res.json();
 
         const wells = data.wells || [];
 
-        // KPI VALUES
         document.getElementById('wellCount').innerText = wells.length;
+        document.getElementById('pumpedYesterday').innerText = data.pumpedYesterday ?? 0;
+        document.getElementById('pumpedToday').innerText = data.pumpedToday ?? 0;
+        document.getElementById('alarmCount').innerText = data.activeAlarms ?? 0;
 
-        document.getElementById('totalFlow').innerText =
-            wells.reduce((sum, x) => sum + (x.totalGallons || 0), 0);
-
-        document.getElementById('alarmCount').innerText =
-            wells.filter(x => x.isAlarm).length;
-
-        // PLANT TILE
-        const plant = data.plant || {};
-
-        document.getElementById('plantFlow').innerText = plant.flowRate ?? 0;
-        document.getElementById('plantPh').innerText = plant.ph ?? 0;
-
-        // GRID
         const grid = document.getElementById('wellGrid');
         grid.innerHTML = '';
 
@@ -99,184 +79,45 @@
                 <div class="well-name">${well.wellName}</div>
 
                 <div class="well-stat">
-                    <span>Last</span>
-                    <span>${well.lastReading}</span>
+                    <span>Gallons Yesterday</span>
+                    <span>${well.gallonsYesterday}</span>
                 </div>
 
                 <div class="well-stat">
-                    <span>Total</span>
-                    <span>${well.totalGallons}</span>
+                    <span>Gallons Today</span>
+                    <span>${well.gallonsToday}</span>
                 </div>
             `;
 
             grid.appendChild(div);
         });
-            const pumps = data.pumpStations || [];
-            const pumpGrid = document.getElementById('pumpGrid');
-    pumpGrid.innerHTML = '';
 
-    pumps.forEach(pump => {
-        const div = document.createElement('div');
-        div.className = 'well-card';
+        const pumps = data.pumpStations || [];
+        const pumpGrid = document.getElementById('pumpGrid');
+        pumpGrid.innerHTML = '';
 
-        div.innerHTML = `
-            <div class="well-name">${pump.name}</div>
-
-            <div class="well-stat">
-                <span>Hours</span>
-                <span>${pump.hours}</span>
-            </div>
-
-            <div class="well-stat">
-                <span>Updated</span>
-                <span>${pump.lastUpdated ? new Date(pump.lastUpdated).toLocaleString([], { hour12: false }) : ''}</span>
-            </div>
-        `;
-
-        pumpGrid.appendChild(div);
-    });
-    }
-
-
-
-    /* =========================
-       PLAYBACK MODE
-    ========================= */
-
-    async function loadHistory() {
-        const res = await fetch('/api/scada/history?days=7');
-        historyData = await res.json();
-
-        buildTimeline();
-    }
-
-    function buildTimeline() {
-        const slider = document.getElementById('timeline');
-
-        if (!historyData.length) return;
-
-        const maxPoints = Math.max(...historyData.map(w => w.points.length));
-
-        slider.max = maxPoints - 1;
-        slider.value = 0;
-
-        slider.oninput = () => {
-            currentIndex = parseInt(slider.value);
-            renderPlayback();
-        };
-    }
-
-    function renderPlayback() {
-        const grid = document.getElementById('wellGrid');
-        grid.innerHTML = '';
-
-        historyData.forEach(well => {
-            const point = well.points[currentIndex] || { value: 0, time: '' };
-
-            const trendBars = well.points
-                .slice(Math.max(0, currentIndex - 10), currentIndex)
-                .map(p => `<div class="mini-bar" style="height:${p.value / 10}px"></div>`)
-                .join('');
-
+        pumps.forEach(pump => {
             const div = document.createElement('div');
-            div.className = 'well-card';
+            div.className = 'well-card ' + (pump.flashRed ? 'flash-red' : '');
 
             div.innerHTML = `
-                <div class="well-name">${well.wellName}</div>
-
-                <div class="mini-chart">${trendBars}</div>
+                <div class="well-name">${pump.name}</div>
 
                 <div class="well-stat">
-                    <span>Value</span>
-                    <span>${point.value}</span>
+                    <span>Hours Yesterday</span>
+                    <span>${pump.hoursYesterday}</span>
+                </div>
+
+                <div class="well-stat">
+                    <span>Hours Today</span>
+                    <span>${pump.hoursToday}</span>
                 </div>
             `;
 
-            grid.appendChild(div);
-
-            document.getElementById('timeLabel').innerText = point.time;
+            pumpGrid.appendChild(div);
         });
     }
 
-    /* =========================
-       PLAYBACK CONTROLS
-    ========================= */
-
-    function play() {
-        if (playing) return;
-
-        playing = true;
-
-        timer = setInterval(() => {
-            currentIndex++;
-
-            const slider = document.getElementById('timeline');
-
-            if (currentIndex >= slider.max) {
-                currentIndex = 0;
-            }
-
-            slider.value = currentIndex;
-            renderPlayback();
-
-        }, 500);
-    }
-
-    function pause() {
-        playing = false;
-        clearInterval(timer);
-    }
-
-    /* =========================
-       MODE SWITCH
-    ========================= */
-
-    function toggleMode() {
-        liveMode = !liveMode;
-
-        if (liveMode) {
-            pause();
-            loadScada();
-        } else {
-            loadHistory();
-        }
-    }
-
-    /* =========================
-       SIGNALR
-    ========================= */
-
-    const connection = new signalR.HubConnectionBuilder()
-        .withUrl("/scadaHub")
-        .build();
-
-    connection.on("scadaUpdate", () => {
-        if (liveMode) loadScada();
-    });
-
-    connection.on("scadaAlarm", alarm => {
-        alert(`🚨 ALARM: ${alarm.message}`);
-    });
-
-    connection.start();
-
-    /* =========================
-       ACTIONS
-    ========================= */
-
-    async function ack(wellId) {
-        await fetch(`/api/scada/ack/${wellId}`, { method: 'POST' });
-    }
-
-    async function setThreshold(wellId, value) {
-        await fetch(`/api/scada/threshold/${wellId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: value
-        });
-    }
-
-    /* INIT */
     loadScada();
-
+    setInterval(loadScada, 60000);
 </script>

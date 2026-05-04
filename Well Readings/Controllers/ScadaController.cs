@@ -20,6 +20,9 @@ namespace Well_Readings.Controllers
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboard()
         {
+            var today = DateTime.Today;
+            var yesterday = today.AddDays(-1);
+
             var meterColumns = new[]
             {
         "Reeves Well",
@@ -39,22 +42,14 @@ namespace Well_Readings.Controllers
 
             foreach (var well in meterColumns)
             {
-                var readings = await _context.ScadaHistoryPoints
-                    .Where(x => x.Location == well && x.MetricType == "Meter Reading")
-                    .OrderBy(x => x.Timestamp)
-                    .ToListAsync();
-
-                if (!readings.Any())
-                    continue;
-
-                var first = readings.First().Value ?? 0;
-                var last = readings.Last().Value ?? 0;
+                var gallonsYesterday = await GetDeltaForDate(well, "Meter Reading", yesterday);
+                var gallonsToday = await GetDeltaForDate(well, "Meter Reading", today);
 
                 wells.Add(new
                 {
                     wellName = well,
-                    lastReading = last,
-                    totalGallons = last - first,
+                    gallonsYesterday,
+                    gallonsToday,
                     isAlarm = false
                 });
             }
@@ -77,53 +72,66 @@ namespace Well_Readings.Controllers
 
             foreach (var pump in pumpNames)
             {
-                var today = DateTime.Today;
+                var hoursYesterday = await GetDeltaForDate(pump, "Pump Status", yesterday);
 
-                var latestToday = await _context.ScadaHistoryPoints
-                    .Where(x => x.Location == pump && x.Timestamp.Date == today)
-                    .OrderByDescending(x => x.Timestamp)
-                    .FirstOrDefaultAsync();
+                if (hoursYesterday == 0)
+                    hoursYesterday = await GetDeltaForDate(pump, "Generator Status", yesterday);
 
-                var previous = await _context.ScadaHistoryPoints
-                    .Where(x => x.Location == pump && x.Timestamp < today)
-                    .OrderByDescending(x => x.Timestamp)
-                    .FirstOrDefaultAsync();
+                var hoursToday = await GetDeltaForDate(pump, "Pump Status", today);
 
-                decimal hoursPumpedToday = 0;
-
-                if (latestToday?.Value != null && previous?.Value != null)
-                {
-                    hoursPumpedToday = latestToday.Value.Value - previous.Value.Value;
-
-                    if (hoursPumpedToday < 0)
-                        hoursPumpedToday = 0;
-                }
+                if (hoursToday == 0)
+                    hoursToday = await GetDeltaForDate(pump, "Generator Status", today);
 
                 pumpStations.Add(new
                 {
                     name = pump,
-                    hours = hoursPumpedToday,
-                    lastReading = latestToday?.Value ?? 0,
-                    previousReading = previous?.Value ?? 0,
-                    lastUpdated = latestToday?.Timestamp
+                    hoursYesterday,
+                    hoursToday,
+                    flashRed = hoursToday == 0
                 });
             }
 
-            var plant = new
-            {
-                flowRate = await GetLatestValue("Filter Plant", "Feed Flow"),
-                turbidity = await GetLatestValue("Filter Plant", "Turbidity"),
-                chlorine = await GetLatestValue("Filter Plant", "Chlorine"),
-                ph = await GetLatestValue("Filter Plant", "pH"),
-                temperature = await GetLatestValue("Filter Plant", "Temperature")
-            };
+            var pumpedYesterday = wells.Sum(x => (decimal)x.GetType().GetProperty("gallonsYesterday")!.GetValue(x)!);
+            var pumpedToday = wells.Sum(x => (decimal)x.GetType().GetProperty("gallonsToday")!.GetValue(x)!);
 
             return Ok(new
             {
                 wells,
                 pumpStations,
-                plant
+                pumpedYesterday,
+                pumpedToday,
+                activeAlarms = 0
             });
+        }
+
+        private async Task<decimal> GetDeltaForDate(string location, string metricType, DateTime date)
+        {
+            var start = date.Date;
+            var end = start.AddDays(1);
+
+            var current = await _context.ScadaHistoryPoints
+                .Where(x =>
+                    x.Location == location &&
+                    x.MetricType == metricType &&
+                    x.Timestamp >= start &&
+                    x.Timestamp < end)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+
+            var previous = await _context.ScadaHistoryPoints
+                .Where(x =>
+                    x.Location == location &&
+                    x.MetricType == metricType &&
+                    x.Timestamp < start)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+
+            if (current?.Value == null || previous?.Value == null)
+                return 0;
+
+            var delta = current.Value.Value - previous.Value.Value;
+
+            return delta < 0 ? 0 : delta;
         }
 
         [HttpPost("import-excel")]

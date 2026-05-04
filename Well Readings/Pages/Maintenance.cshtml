@@ -239,10 +239,25 @@
         `;
     }
 
-    function updateCheck(site, field, checked) {
-        maintenanceState[site][field] = checked;
-        updateTileColor(site);
-    }
+    async function updateCheck(site, field, checked) {
+    maintenanceState[site][field] = checked;
+    updateTileColor(site);
+
+    await fetch("/api/maintenance/site-status", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            siteName: site,
+            isOn: false,
+            needChlorine: maintenanceState[site].needChlorine,
+            needPhosphate: maintenanceState[site].needPhosphate,
+            needInjector: maintenanceState[site].needInjector,
+            needChemicalPump: maintenanceState[site].needChemicalPump
+        })
+    });
+}
 
     function updateTileColor(site) {
         const tile = document.getElementById(`tile-${site}`);
@@ -318,23 +333,31 @@
         const container = document.getElementById("statusChecks");
         container.innerHTML = "";
 
-        runningSites.forEach(site => {
-            const saved = statuses.find(x => x.siteName === site);
-            const checked = saved?.isOn ? "checked" : "";
+       runningSites.forEach(site => {
+    const saved = statuses.find(x => x.siteName === site);
+    const checked = saved?.isOn ? "checked" : "";
 
-            const div = document.createElement("div");
-            div.className = "status-check";
+    // ✅ ADD THIS BLOCK HERE
+    maintenanceState[site] = {
+        needChlorine: saved?.needChlorine || false,
+        needPhosphate: saved?.needPhosphate || false,
+        needInjector: saved?.needInjector || false,
+        needChemicalPump: saved?.needChemicalPump || false
+    };
 
-            div.innerHTML = `
-                <label>
-                    <input type="checkbox" ${checked}
-                        onchange="saveRunningStatus('${site}', this.checked)" />
-                    ${site} ON
-                </label>
-            `;
+    const div = document.createElement("div");
+    div.className = "status-check";
 
-            container.appendChild(div);
-        });
+    div.innerHTML = `
+        <label>
+            <input type="checkbox" ${checked}
+                onchange="saveRunningStatus('${site}', this.checked)" />
+            ${site} ON
+        </label>
+    `;
+
+    container.appendChild(div);
+});
     }
 
     async function saveRunningStatus(siteName, isOn) {

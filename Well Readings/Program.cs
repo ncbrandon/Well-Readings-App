@@ -116,7 +116,7 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.UseMiddleware<ExceptionMiddleware>();
-
+app.MapGet("/", () => Results.Redirect("/Scada"));
 app.MapControllers();
 
 app.MapRazorPages();
