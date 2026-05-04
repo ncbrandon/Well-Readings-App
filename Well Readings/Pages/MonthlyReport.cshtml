@@ -447,28 +447,45 @@
         const data = await response.json();
 
         const script = `
-    function setNcValue(el, value) {
+        async function setNcValue(el, value) {
         if (!el || value === null || value === undefined || value === "") return;
 
         el.focus();
-        el.value = value;
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-        el.dispatchEvent(new Event("change", { bubbles: true }));
-        el.blur();
+        el.className = "TextBoxNoBorderEnter";
+        el.value = value.toString();
+
+        if (typeof el.onkeyup === "function") {
+            el.onkeyup({ target: el });
+        }
+
+        if (typeof el.onchange === "function") {
+            el.onchange();
+        }
+
+        if (typeof el.onblur === "function") {
+            el.onblur();
+        } else {
+            el.dispatchEvent(new Event("blur", { bubbles: true }));
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 250));
     }
 
     const data = ${JSON.stringify(data, null, 4)};
 
-    data.forEach((row, index) => {
+        (async function () {
+    for (let index = 0; index < data.length; index++) {
+        const row = data[index];
         const rowIndex = (index + 2).toString().padStart(2, "0");
 
-        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`), row.time);
-        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`), Math.round(row.gallons));
-        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`), row.chlorine);
-        setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`), row.phosphate);
-    });
+        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`), row.time);
+        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`), Math.round(row.gallons));
+        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`), row.chlorine);
+        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`), row.phosphate);
+        }
 
-    console.log("NC MOR autofill complete.");
+    console.log("NC MOR autofill complete. Wait a few seconds, then click the site's Save/Submit button if available.");
+    })();
     `;
 
         document.getElementById("ncMorScript").value = script;
