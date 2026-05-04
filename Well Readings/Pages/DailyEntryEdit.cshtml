@@ -210,9 +210,37 @@
                 { label: "Phosphate", location: "Filter Plant", metricType: "Phosphate", sourceColumn: "PO4-F" },
                 { label: "pH", location: "Filter Plant", metricType: "pH", sourceColumn: "pH-F" },
                 { label: "Temperature", location: "Filter Plant", metricType: "Temperature", sourceColumn: "Temp-F" },
-                { label: "Mt. Jefferson Meter", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" },
-                { label: "Pump Flow", location: "Pump Stations", metricType: "Flow", sourceColumn: "Pump Flow" },
-                { label: "Pressure", location: "Pump Stations", metricType: "Pressure", sourceColumn: "Pump Pressure" }
+                { label: "Mt. Jefferson Meter", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" }
+            ]
+        },
+        {
+            groupName: "Beaver Creek Pump Station",
+            fields: [
+                { label: "Pump 1", location: "Beaver Creek Pump 1", metricType: "Pump Status", sourceColumn: "Beaver Creek Pump 1" },
+                { label: "Pump 2", location: "Beaver Creek Pump 2", metricType: "Pump Status", sourceColumn: "Beaver Creek Pump 2" },
+                { label: "Generator", location: "Beaver Creek Generator", metricType: "Generator Status", sourceColumn: "Beaver Creek Generator" }
+            ]
+        },
+        {
+            groupName: "Greenfield Pump Station",
+            fields: [
+                { label: "Pump 1", location: "Greenfield Pump 1", metricType: "Pump Status", sourceColumn: "Greenfield Pump 1" },
+                { label: "Pump 2", location: "Greenfield Pump 2", metricType: "Pump Status", sourceColumn: "Greenfield Pump 2" },
+                { label: "Generator", location: "Greenfield Generator", metricType: "Generator Status", sourceColumn: "Greenfield Generator" }
+            ]
+        },
+        {
+            groupName: "Helen Blevins Pump Station",
+            fields: [
+                { label: "Pump 1", location: "Helen Blevins Pump 1", metricType: "Pump Status", sourceColumn: "Helen Blevins Pump 1" },
+                { label: "Pump 2", location: "Helen Blevins Pump 2", metricType: "Pump Status", sourceColumn: "Helen Blevins Pump 2" }
+            ]
+        },
+        {
+            groupName: "Dogget Pump Station",
+            fields: [
+                { label: "Pump 1", location: "Dogget Pump 1", metricType: "Pump Status", sourceColumn: "Dogget Pump 1" },
+                { label: "Pump 2", location: "Dogget Pump 2", metricType: "Pump Status", sourceColumn: "Dogget Pump 2" }
             ]
         }
     ];
@@ -262,6 +290,8 @@
                             <label>${field.label}</label>
                             <input
                                 type="number"
+                                inputmode="decimal"
+                                pattern="[0-9]*"
                                 step="0.01"
                                 value="${value}"
                                 data-location="${field.location}"
