@@ -81,13 +81,11 @@
     </div>
 </section>
 
-<hr />
-
-<section class="report-section">
+<section class="report-card">
     <h2>Pump Station Report</h2>
 
-    <div class="report-controls">
-        <label>Pump Station:</label>
+    <div class="filter-row">
+        <label>Pump Station</label>
         <select id="pumpStationSelect">
             <option value="Beaver Creek">Beaver Creek</option>
             <option value="Greenfield">Greenfield</option>
@@ -95,10 +93,10 @@
             <option value="Dogget">Dogget</option>
         </select>
 
-        <label>Beginning Date:</label>
+        <label>Beginning Date</label>
         <input type="date" id="pumpStartDate" />
 
-        <label>Ending Date:</label>
+        <label>Ending Date</label>
         <input type="date" id="pumpEndDate" />
 
         <button type="button" onclick="loadPumpStationReport()">Run Pump Station Report</button>
@@ -118,13 +116,11 @@
     </table>
 </section>
 
-<hr />
-
-<section class="report-section">
+<section class="report-card">
     <h2>NC MOR Autofill Report</h2>
 
-    <div class="report-controls">
-        <label>Site:</label>
+    <div class="filter-row">
+        <label>Site</label>
         <select id="ncMorSite">
             <option value="Reeves Well Site">Reeves Well Site</option>
             <option value="Park Well Site">Park Well Site</option>
@@ -136,18 +132,22 @@
             <option value="Filter Plant">Filter Plant</option>
         </select>
 
-        <label>Beginning Date:</label>
+        <label>Beginning Date</label>
         <input type="date" id="ncMorStartDate" />
 
-        <label>Ending Date:</label>
+        <label>Ending Date</label>
         <input type="date" id="ncMorEndDate" />
 
         <button type="button" onclick="generateNcMorScript()">Generate NC MOR Script</button>
+        <button type="button" onclick="copyNcMorScript()">Copy Script</button>
     </div>
 
-    <textarea id="ncMorScript" style="width:100%;height:300px;margin-top:15px;"></textarea>
+    <p class="help-text">
+        Generate the script, copy it, then paste it into the NC MOR browser console.
+        This version fills slowly and waits between rows so the state site has time to auto-save.
+    </p>
 
-    <button type="button" onclick="copyNcMorScript()">Copy Script</button>
+    <textarea id="ncMorScript" class="script-box"></textarea>
 </section>
 
 <style>
@@ -238,6 +238,24 @@
         color: #047857;
     }
 
+    .script-box {
+        width: 100%;
+        height: 360px;
+        margin-top: 15px;
+        padding: 12px;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        color: #111827;
+        background: white;
+        font-family: Consolas, monospace;
+        font-size: 13px;
+    }
+
+    .help-text {
+        color: #374151;
+        font-weight: bold;
+    }
+
     @@media (max-width: 800px) {
         .filter-row {
             display: block;
@@ -259,243 +277,297 @@
 </style>
 
 <script>
-    setDefaultDates();
+        setDefaultDates();
 
-    function setDefaultDates() {
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
 
-        document.getElementById("siteStartDate").valueAsDate = firstDay;
-        document.getElementById("siteEndDate").valueAsDate = today;
-        document.getElementById("meterStartDate").valueAsDate = firstDay;
-        document.getElementById("meterEndDate").valueAsDate = today;
-    }
-
-    async function loadSiteReport() {
-        const site = document.getElementById("siteSelect").value;
-        const startDate = document.getElementById("siteStartDate").value;
-        const endDate = document.getElementById("siteEndDate").value;
-
-        if (!startDate || !endDate) {
-            alert("Please select a beginning and ending date.");
-            return;
+            document.getElementById("siteStartDate").valueAsDate = firstDay;
+            document.getElementById("siteEndDate").valueAsDate = today;
+            document.getElementById("meterStartDate").valueAsDate = firstDay;
+            document.getElementById("meterEndDate").valueAsDate = today;
+            document.getElementById("pumpStartDate").valueAsDate = firstDay;
+            document.getElementById("pumpEndDate").valueAsDate = today;
+            document.getElementById("ncMorStartDate").valueAsDate = firstDay;
+            document.getElementById("ncMorEndDate").valueAsDate = today;
         }
 
-        const response = await fetch(`/api/scada/monthly-site-report?site=${encodeURIComponent(site)}&startDate=${startDate}&endDate=${endDate}`);
+        async function loadSiteReport() {
+            const site = document.getElementById("siteSelect").value;
+            const startDate = document.getElementById("siteStartDate").value;
+            const endDate = document.getElementById("siteEndDate").value;
 
-        if (!response.ok) {
-            alert("Error loading monthly report.");
-            return;
+            if (!startDate || !endDate) {
+                alert("Please select a beginning and ending date.");
+                return;
+            }
+
+            const response = await fetch(`/api/scada/monthly-site-report?site=${encodeURIComponent(site)}&startDate=${startDate}&endDate=${endDate}`);
+
+            if (!response.ok) {
+                alert("Error loading monthly report.");
+                return;
+            }
+
+            const data = await response.json();
+
+            renderSiteRows(data.rows || []);
+            renderSummaryRows(data.summary || []);
         }
 
-        const data = await response.json();
+        function renderSiteRows(rows) {
+            const body = document.getElementById("siteReportBody");
+            body.innerHTML = "";
 
-        renderSiteRows(data.rows || []);
-        renderSummaryRows(data.summary || []);
-    }
+            if (rows.length === 0) {
+                body.innerHTML = `<tr><td colspan="8">No results found.</td></tr>`;
+                return;
+            }
 
-    function renderSiteRows(rows) {
-        const body = document.getElementById("siteReportBody");
-        body.innerHTML = "";
+            rows.forEach(row => {
+                const tr = document.createElement("tr");
 
-        if (rows.length === 0) {
-            body.innerHTML = `<tr><td colspan="8">No results found.</td></tr>`;
-            return;
+                tr.innerHTML = `
+                    <td>${formatDateTime(row.date)}</td>
+                    <td>${row.site}</td>
+                    <td>${row.name}</td>
+                    <td>${formatNumber(row.gallonsPumped)}</td>
+                    <td>${formatValue(row.chlorine)}</td>
+                    <td>${formatValue(row.phosphate)}</td>
+                    <td>${formatValue(row.ph)}</td>
+                    <td>${formatValue(row.temperature)}</td>
+                `;
+
+                body.appendChild(tr);
+            });
         }
 
-        rows.forEach(row => {
-            const tr = document.createElement("tr");
+        function renderSummaryRows(rows) {
+            const body = document.getElementById("summaryBody");
+            body.innerHTML = "";
 
-            tr.innerHTML = `
-                <td>${formatDateTime(row.date)}</td>
-                <td>${row.site}</td>
-                <td>${row.name}</td>
-                <td>${formatNumber(row.gallonsPumped)}</td>
-                <td>${formatValue(row.chlorine)}</td>
-                <td>${formatValue(row.phosphate)}</td>
-                <td>${formatValue(row.ph)}</td>
-                <td>${formatValue(row.temperature)}</td>
-            `;
+            if (rows.length === 0) {
+                body.innerHTML = `<tr><td colspan="4">No summary found.</td></tr>`;
+                return;
+            }
 
-            body.appendChild(tr);
-        });
-    }
+            rows.forEach(row => {
+                const tr = document.createElement("tr");
 
-    function renderSummaryRows(rows) {
-        const body = document.getElementById("summaryBody");
-        body.innerHTML = "";
+                tr.innerHTML = `
+                    <td>${row.site}</td>
+                    <td>${row.name}</td>
+                    <td>${row.daysPumped}</td>
+                    <td>${formatNumber(row.maxGallonsPumped)}</td>
+                `;
 
-        if (rows.length === 0) {
-            body.innerHTML = `<tr><td colspan="4">No summary found.</td></tr>`;
-            return;
+                body.appendChild(tr);
+            });
         }
 
-        rows.forEach(row => {
-            const tr = document.createElement("tr");
+        async function loadMeterTotalReport() {
+            const startDate = document.getElementById("meterStartDate").value;
+            const endDate = document.getElementById("meterEndDate").value;
 
-            tr.innerHTML = `
-                <td>${row.site}</td>
-                <td>${row.name}</td>
-                <td>${row.daysPumped}</td>
-                <td>${formatNumber(row.maxGallonsPumped)}</td>
-            `;
+            if (!startDate || !endDate) {
+                alert("Please select a beginning and ending date.");
+                return;
+            }
 
-            body.appendChild(tr);
-        });
-    }
+            const response = await fetch(`/api/scada/meter-reading-total-report?startDate=${startDate}&endDate=${endDate}`);
 
-    async function loadMeterTotalReport() {
-        const startDate = document.getElementById("meterStartDate").value;
-        const endDate = document.getElementById("meterEndDate").value;
+            if (!response.ok) {
+                alert("Error loading total meter report.");
+                return;
+            }
 
-        if (!startDate || !endDate) {
-            alert("Please select a beginning and ending date.");
-            return;
+            const data = await response.json();
+
+            document.getElementById("totalGallons").innerText =
+                formatNumber(data.totalGallonsPumped);
         }
-
-        const response = await fetch(`/api/scada/meter-reading-total-report?startDate=${startDate}&endDate=${endDate}`);
-
-        if (!response.ok) {
-            alert("Error loading total meter report.");
-            return;
-        }
-
-        const data = await response.json();
-
-        document.getElementById("totalGallons").innerText =
-            formatNumber(data.totalGallonsPumped);
-    }
-
-    function formatDateTime(value) {
-        if (!value) return "";
-        return new Date(value).toLocaleString();
-    }
-    
-    function formatDate(value) {
-        if (!value) return "";
-        return new Date(value).toLocaleDateString();
-    }
-
-    function formatValue(value) {
-        if (value === null || value === undefined) return "";
-        return Number(value).toLocaleString(undefined, {
-            maximumFractionDigits: 3
-        });
-    }
-
-    function formatNumber(value) {
-        if (value === null || value === undefined) return "0";
-        return Number(value).toLocaleString(undefined, {
-            maximumFractionDigits: 0
-        });
-    }
 
         async function loadPumpStationReport() {
-        const station = document.getElementById("pumpStationSelect").value;
-        const startDate = document.getElementById("pumpStartDate").value;
-        const endDate = document.getElementById("pumpEndDate").value;
+            const station = document.getElementById("pumpStationSelect").value;
+            const startDate = document.getElementById("pumpStartDate").value;
+            const endDate = document.getElementById("pumpEndDate").value;
 
-        if (!startDate || !endDate) {
-            alert("Please choose a beginning and ending date.");
-            return;
+            if (!startDate || !endDate) {
+                alert("Please choose a beginning and ending date.");
+                return;
+            }
+
+            const response = await fetch(`/api/scada/pump-station-report?station=${encodeURIComponent(station)}&startDate=${startDate}&endDate=${endDate}`);
+
+            const body = document.getElementById("pumpStationReportBody");
+            body.innerHTML = "";
+
+            if (!response.ok) {
+                body.innerHTML = `<tr><td colspan="5">Error loading pump station report.</td></tr>`;
+                return;
+            }
+
+            const rows = await response.json();
+
+            if (rows.length === 0) {
+                body.innerHTML = `<tr><td colspan="5">No pump station results found.</td></tr>`;
+                return;
+            }
+
+            rows.forEach(row => {
+                const tr = document.createElement("tr");
+
+                tr.innerHTML = `
+                    <td>${new Date(row.date).toLocaleString([], { hour12: false })}</td>
+                    <td>${row.station}</td>
+                    <td>${row.pump}</td>
+                    <td>${formatValue(row.reading)}</td>
+                    <td>${formatValue(row.hoursRun)}</td>
+                `;
+
+                body.appendChild(tr);
+            });
         }
-
-        const response = await fetch(`/api/scada/pump-station-report?station=${encodeURIComponent(station)}&startDate=${startDate}&endDate=${endDate}`);
-
-        const body = document.getElementById("pumpStationReportBody");
-        body.innerHTML = "";
-
-        if (!response.ok) {
-            body.innerHTML = `<tr><td colspan="5">Error loading pump station report.</td></tr>`;
-            return;
-        }
-
-        const rows = await response.json();
-
-        rows.forEach(row => {
-            const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-                <td>${new Date(row.date).toLocaleString([], { hour12: false })}</td>
-                <td>${row.station}</td>
-                <td>${row.pump}</td>
-                <td>${row.reading}</td>
-                <td>${row.hoursRun}</td>
-            `;
-
-            body.appendChild(tr);
-        });
-    }
 
         async function generateNcMorScript() {
-        const site = document.getElementById("ncMorSite").value;
-        const startDate = document.getElementById("ncMorStartDate").value;
-        const endDate = document.getElementById("ncMorEndDate").value;
+            const site = document.getElementById("ncMorSite").value;
+            const startDate = document.getElementById("ncMorStartDate").value;
+            const endDate = document.getElementById("ncMorEndDate").value;
 
-        if (!startDate || !endDate) {
-            alert("Please choose beginning and ending dates.");
+            if (!startDate || !endDate) {
+                alert("Please choose beginning and ending dates.");
+                return;
+            }
+
+            const response = await fetch(`/api/scada/nc-mor-report?site=${encodeURIComponent(site)}&startDate=${startDate}&endDate=${endDate}`);
+
+            if (!response.ok) {
+                alert("Error loading NC MOR data.");
+                return;
+            }
+
+            const data = await response.json();
+
+            const script =
+    `function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function setNcValue(el, value, label) {
+        if (!el) {
+            console.warn("Missing field:", label);
             return;
         }
 
-        const response = await fetch(`/api/scada/nc-mor-report?site=${encodeURIComponent(site)}&startDate=${startDate}&endDate=${endDate}`);
-
-        if (!response.ok) {
-            alert("Error loading NC MOR data.");
+        if (value === null || value === undefined || value === "") {
+            console.log("Skipping blank value:", label);
             return;
         }
 
-        const data = await response.json();
+        el.scrollIntoView({ block: "center" });
 
-        const script = `
-        async function setNcValue(el, value) {
-        if (!el || value === null || value === undefined || value === "") return;
+        if (typeof el.onfocus === "function") {
+            el.onfocus();
+        }
 
         el.focus();
-        el.className = "TextBoxNoBorderEnter";
+        await sleep(200);
+
+        el.value = "";
+        await sleep(150);
+
         el.value = value.toString();
 
-        if (typeof el.onkeyup === "function") {
-            el.onkeyup({ target: el });
-        }
+        el.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true }));
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
 
-        if (typeof el.onchange === "function") {
-            el.onchange();
-        }
+        await sleep(200);
 
         if (typeof el.onblur === "function") {
             el.onblur();
-        } else {
-            el.dispatchEvent(new Event("blur", { bubbles: true }));
         }
 
-        await new Promise(resolve => setTimeout(resolve, 250));
+        el.blur();
+
+        await sleep(700);
     }
 
     const data = ${JSON.stringify(data, null, 4)};
 
-        (async function () {
-    for (let index = 0; index < data.length; index++) {
-        const row = data[index];
-        const rowIndex = (index + 2).toString().padStart(2, "0");
+    (async function () {
+        console.log("Waiting for NC MOR page to finish loading...");
+        await sleep(2500);
 
-        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`), row.time);
-        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`), Math.round(row.gallons));
-        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`), row.chlorine);
-        await setNcValue(document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`), row.phosphate);
+        for (let index = 0; index < data.length; index++) {
+            const row = data[index];
+            const rowIndex = (index + 2).toString().padStart(2, "0");
+
+            console.log("Filling row", index + 1, row);
+
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`),
+                row.time,
+                \`Row \${rowIndex} Time\`
+            );
+
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`),
+                Math.round(row.gallons),
+                \`Row \${rowIndex} Source Pumped\`
+            );
+
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
+                row.chlorine,
+                \`Row \${rowIndex} Chlorine\`
+            );
+
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`),
+                row.phosphate,
+                \`Row \${rowIndex} Phosphate\`
+            );
+
+            console.log("Finished row", index + 1);
+            await sleep(1200);
         }
 
-    console.log("NC MOR autofill complete. Wait a few seconds, then click the site's Save/Submit button if available.");
-    })();
-    `;
+        console.log("NC MOR autofill complete. Wait at least 10 seconds, then refresh the NC page to confirm saved values.");
+    })();`;
 
-        document.getElementById("ncMorScript").value = script;
-    }
+            document.getElementById("ncMorScript").value = script;
+        }
 
-    function copyNcMorScript() {
-        const box = document.getElementById("ncMorScript");
-        box.select();
-        document.execCommand("copy");
-        alert("NC MOR script copied.");
-    }
+        function copyNcMorScript() {
+            const box = document.getElementById("ncMorScript");
+            box.select();
+            document.execCommand("copy");
+            alert("NC MOR script copied.");
+        }
 
+        function formatDateTime(value) {
+            if (!value) return "";
+            return new Date(value).toLocaleString();
+        }
+
+        function formatDate(value) {
+            if (!value) return "";
+            return new Date(value).toLocaleDateString();
+        }
+
+        function formatValue(value) {
+            if (value === null || value === undefined) return "";
+            return Number(value).toLocaleString(undefined, {
+                maximumFractionDigits: 3
+            });
+        }
+
+        function formatNumber(value) {
+            if (value === null || value === undefined) return "0";
+            return Number(value).toLocaleString(undefined, {
+                maximumFractionDigits: 0
+            });
+        }
 </script>
