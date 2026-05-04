@@ -5,15 +5,16 @@
 
 <div class="entry-header">
     <label>Date:</label>
-    <input type="date" id="entryDate" />
+    <input type="date" id="entryDate" disabled />
 
     <label>Time:</label>
-    <input type="time" id="entryTime" step="1" />
+    <input type="time" id="entryTime" step="1" disabled />
 </div>
 
 <div id="entryPanel" class="entry-panel"></div>
 
-<button type="button" class="save-btn" onclick="saveEntry()">Save Changes</button>
+<button type="button" class="edit-btn" id="editBtn" onclick="enableEditing()">Edit Entry</button>
+<button type="button" class="save-btn" id="saveBtn" onclick="saveEntry()" disabled>Save Changes</button>
 <a class="back-link" href="/DailyEntry">Back to Daily Entries</a>
 
 <div id="message"></div>
@@ -104,6 +105,29 @@
         font-weight: bold;
         color: #111827;
     }
+
+    .edit-btn {
+        padding: 12px 24px;
+        font-weight: bold;
+        background: #047857;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .save-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    .field-row input:disabled,
+    .entry-header input:disabled {
+        background: #e5e7eb;
+        color: #6b7280;
+        cursor: not-allowed;
+    }
+
 </style>
 
 <script>
@@ -296,7 +320,8 @@
                                 value="${value}"
                                 data-location="${field.location}"
                                 data-metric="${field.metricType}"
-                                data-source="${field.sourceColumn}" />
+                                data-source="${field.sourceColumn}"
+                                disabled />
                         </div>
                     `;
                 }).join("")}
@@ -304,7 +329,30 @@
         `).join("");
     }
 
+        function enableEditing() {
+        const confirmEdit = confirm("Enable editing for this daily entry? Changes can affect the database.");
+
+        if (!confirmEdit) return;
+
+        document.querySelectorAll("#entryPanel input").forEach(input => {
+            input.disabled = false;
+        });
+
+        document.getElementById("entryDate").disabled = false;
+        document.getElementById("entryTime").disabled = false;
+
+        document.getElementById("saveBtn").disabled = false;
+        document.getElementById("editBtn").disabled = true;
+
+        document.getElementById("message").innerText = "Editing enabled. Make changes, then click Save Changes.";
+        document.getElementById("message").style.color = "#92400e";
+    }
+    
     async function saveEntry() {
+        if (document.getElementById("saveBtn").disabled) {
+            alert("Click Edit Entry before saving changes.");
+            return;
+    }
         const date = document.getElementById("entryDate").value;
         const time = document.getElementById("entryTime").value;
 
