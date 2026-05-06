@@ -279,6 +279,34 @@
             font-size: 13px;
         }
     }
+
+    .ending-date-warning {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .meter-warning {
+        color: #dc2626;
+        font-weight: bold;
+        font-size: 14px;
+        animation: flashWarning 1s infinite;
+    }
+
+    @@keyframes flashWarning {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.2;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
 </style>
 
 <script>
