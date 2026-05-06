@@ -70,22 +70,35 @@
 <script>
     async function loadEntries() {
         const response = await fetch("/api/scada/daily-entries");
-        const entries = await response.json();
 
         const body = document.getElementById("entriesBody");
         body.innerHTML = "";
 
+        if (!response.ok) {
+            body.innerHTML = `<tr><td colspan="3">Error loading entries.</td></tr>`;
+            return;
+        }
+
+        const entries = await response.json();
+
+        if (!entries || entries.length === 0) {
+            body.innerHTML = `<tr><td colspan="3">No daily entries found.</td></tr>`;
+            return;
+        }
+
         entries.forEach(entry => {
+            const timestamp = normalizeDateTime(entry.timestamp);
+            const dateOnly = normalizeDateOnly(entry.date || entry.timestamp);
+
             const row = document.createElement("tr");
-            const dateOnly = entry.date || entry.timestamp;
 
             row.innerHTML = `
                 <td>
                     <input type="checkbox" class="entry-check" value="${dateOnly}" />
                 </td>
                 <td>
-                    <a href="/DailyEntryEdit?timestamp=${encodeURIComponent(entry.timestamp)}">
-                        ${new Date(entry.timestamp).toLocaleString(undefined, { hour12: false })}
+                    <a href="/DailyEntryEdit?timestamp=${encodeURIComponent(timestamp)}">
+                        ${formatDateTime(timestamp)}
                     </a>
                 </td>
                 <td>${entry.count}</td>
@@ -122,11 +135,51 @@
         if (response.ok) {
             message.innerText = "Selected entries deleted.";
             message.style.color = "#047857";
-            loadEntries();
+            await loadEntries();
         } else {
-            message.innerText = "Error deleting entries.";
+            const errorText = await response.text();
+            message.innerText = "Error deleting entries. " + errorText;
             message.style.color = "#b91c1c";
         }
+    }
+
+    function normalizeDateTime(value) {
+        if (!value) return "";
+
+        const date = new Date(value);
+
+        return date.getFullYear() + "-" +
+            String(date.getMonth() + 1).padStart(2, "0") + "-" +
+            String(date.getDate()).padStart(2, "0") + "T" +
+            String(date.getHours()).padStart(2, "0") + ":" +
+            String(date.getMinutes()).padStart(2, "0") + ":" +
+            String(date.getSeconds()).padStart(2, "0");
+    }
+
+    function normalizeDateOnly(value) {
+        if (!value) return "";
+
+        const date = new Date(value);
+
+        return date.getFullYear() + "-" +
+            String(date.getMonth() + 1).padStart(2, "0") + "-" +
+            String(date.getDate()).padStart(2, "0");
+    }
+
+    function formatDateTime(value) {
+        if (!value) return "";
+
+        const date = new Date(value);
+
+        return date.toLocaleString(undefined, {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false
+        });
     }
 
     loadEntries();

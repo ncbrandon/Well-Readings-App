@@ -1,409 +1,266 @@
-﻿@page
+﻿@page "/DailyEntryEdit"
 @model Well_Readings.Pages.DailyEntryEditModel
 
 <h1>Edit Daily Entry</h1>
 
-<div class="entry-header">
-    <label>Date:</label>
-    <input type="date" id="entryDate" disabled />
+<div class="top-bar">
+    <button type="button" class="edit-btn" onclick="enableEditMode()">
+        Enable Editing
+    </button>
 
-    <label>Time:</label>
-    <input type="time" id="entryTime" step="1" disabled />
+    <button type="button" class="save-btn" onclick="saveAllChanges()" id="saveButton" disabled>
+        Save Changes
+    </button>
 </div>
-
-<div id="entryPanel" class="entry-panel"></div>
-
-<button type="button" class="edit-btn" id="editBtn" onclick="enableEditing()">Edit Entry</button>
-<button type="button" class="save-btn" id="saveBtn" onclick="saveEntry()" disabled>Save Changes</button>
-<a class="back-link" href="/DailyEntry">Back to Daily Entries</a>
 
 <div id="message"></div>
 
+<table class="entry-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Location</th>
+            <th>Metric</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+
+    <tbody id="entriesBody"></tbody>
+</table>
+
 <style>
-    .entry-header {
-        margin-bottom: 20px;
-        color: #111827;
+    .top-bar {
         display: flex;
-        gap: 10px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-
-        .entry-header label {
-            font-weight: bold;
-        }
-
-        .entry-header input {
-            padding: 8px;
-            border: 1px solid #374151;
-            border-radius: 6px;
-            color: #111827;
-            background: white;
-        }
-
-    .entry-panel {
-        background: #f3f4f6;
-        color: #111827;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 25px;
-    }
-
-    .entry-group {
-        background: white;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 15px;
+        gap: 12px;
         margin-bottom: 20px;
-    }
-
-        .entry-group h2 {
-            color: #111827;
-            border-bottom: 2px solid #047857;
-            padding-bottom: 6px;
-        }
-
-    .field-row {
-        margin-bottom: 12px;
-    }
-
-        .field-row label {
-            display: inline-block;
-            width: 300px;
-            font-weight: bold;
-            color: #111827;
-        }
-
-        .field-row input {
-            padding: 8px;
-            width: 160px;
-            color: #111827;
-            background: white;
-            border: 1px solid #374151;
-            border-radius: 5px;
-        }
-
-    .save-btn {
-        padding: 12px 24px;
-        font-weight: bold;
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-    }
-
-    .back-link {
-        display: inline-block;
-        margin-left: 15px;
-        color: #2563eb;
-        font-weight: bold;
-    }
-
-    #message {
-        margin-top: 20px;
-        font-weight: bold;
-        color: #111827;
     }
 
     .edit-btn {
-        padding: 12px 24px;
-        font-weight: bold;
-        background: #047857;
+        background: #2563eb;
         color: white;
         border: none;
+        padding: 10px 18px;
         border-radius: 8px;
+        font-weight: bold;
         cursor: pointer;
     }
 
-    .save-btn:disabled {
-        background: #9ca3af;
-        cursor: not-allowed;
+    .save-btn {
+        background: #047857;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
     }
 
-    .field-row input:disabled,
-    .entry-header input:disabled {
-        background: #e5e7eb;
-        color: #6b7280;
-        cursor: not-allowed;
+        .save-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+    .entry-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        color: #111827;
     }
 
+        .entry-table th,
+        .entry-table td {
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .entry-table th {
+            background: #1f2937;
+            color: white;
+        }
+
+        .entry-table tbody tr:nth-child(even) {
+            background: #eff6ff;
+        }
+
+        .entry-table input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #9ca3af;
+            border-radius: 6px;
+        }
+
+            .entry-table input:disabled {
+                background: #f3f4f6;
+                color: #6b7280;
+            }
+
+    #message {
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+
+    @@media (max-width: 900px) {
+        .entry-table {
+            font-size: 12px;
+        }
+    }
 </style>
 
 <script>
-    const originalTimestamp = new URLSearchParams(window.location.search).get("timestamp");
+    let entries = [];
+    let editMode = false;
 
-    const fieldGroups = [
-        {
-            groupName: "Reeves Well Site",
-            fields: [
-                { label: "Reeves Well Meter", location: "Reeves Well", metricType: "Meter Reading", sourceColumn: "Reeves Well" },
-                { label: "Reeves Well A Meter", location: "Reeves Well A", metricType: "Meter Reading", sourceColumn: "Reeves Well A" },
-                { label: "Chlorine", location: "Reeves Well Site", metricType: "Chlorine", sourceColumn: "Cl-R" },
-                { label: "Phosphate", location: "Reeves Well Site", metricType: "Phosphate", sourceColumn: "PO4-R" },
-                { label: "pH", location: "Reeves Well Site", metricType: "pH", sourceColumn: "pH-R" }
-            ]
-        },
-        {
-            groupName: "Park Well Site",
-            fields: [
-                { label: "Park Well Meter", location: "Park Well", metricType: "Meter Reading", sourceColumn: "Park Well" },
-                { label: "Park Well A Meter", location: "Park Well A", metricType: "Meter Reading", sourceColumn: "Park Well A" },
-                { label: "Park Well B Meter", location: "Park Well B", metricType: "Meter Reading", sourceColumn: "Park Well B" },
-                { label: "Chlorine", location: "Park Well Site", metricType: "Chlorine", sourceColumn: "Cl-P" },
-                { label: "Phosphate", location: "Park Well Site", metricType: "Phosphate", sourceColumn: "PO4-P" },
-                { label: "pH", location: "Park Well Site", metricType: "pH", sourceColumn: "pH-P" }
-            ]
-        },
-        {
-            groupName: "Woods",
-            fields: [
-                { label: "Meter Reading", location: "Woods", metricType: "Meter Reading", sourceColumn: "Woods" },
-                { label: "Chlorine", location: "Woods", metricType: "Chlorine", sourceColumn: "Cl-W" },
-                { label: "Phosphate", location: "Woods", metricType: "Phosphate", sourceColumn: "PO4-W" },
-                { label: "pH", location: "Woods", metricType: "pH", sourceColumn: "pH-W" }
-            ]
-        },
-        {
-            groupName: "Catawissa",
-            fields: [
-                { label: "Meter Reading", location: "Catawissa", metricType: "Meter Reading", sourceColumn: "Catawissa" },
-                { label: "Chlorine", location: "Catawissa", metricType: "Chlorine", sourceColumn: "Cl-C" },
-                { label: "Phosphate", location: "Catawissa", metricType: "Phosphate", sourceColumn: "PO4-C" },
-                { label: "pH", location: "Catawissa", metricType: "pH", sourceColumn: "pH-C" }
-            ]
-        },
-        {
-            groupName: "New",
-            fields: [
-                { label: "Meter Reading", location: "New", metricType: "Meter Reading", sourceColumn: "New" },
-                { label: "Chlorine", location: "New", metricType: "Chlorine", sourceColumn: "Cl-N" },
-                { label: "Phosphate", location: "New", metricType: "Phosphate", sourceColumn: "PO4-N" },
-                { label: "pH", location: "New", metricType: "pH", sourceColumn: "pH-N" }
-            ]
-        },
-        {
-            groupName: "Oakwood",
-            fields: [
-                { label: "Meter Reading", location: "Oakwood", metricType: "Meter Reading", sourceColumn: "Oakwood" },
-                { label: "Chlorine", location: "Oakwood", metricType: "Chlorine", sourceColumn: "Cl-O" },
-                { label: "Phosphate", location: "Oakwood", metricType: "Phosphate", sourceColumn: "PO4-O" },
-                { label: "pH", location: "Oakwood", metricType: "pH", sourceColumn: "pH-O" }
-            ]
-        },
-        {
-            groupName: "Ray",
-            fields: [
-                { label: "Meter Reading", location: "Ray", metricType: "Meter Reading", sourceColumn: "Ray" },
-                { label: "Chlorine", location: "Ray", metricType: "Chlorine", sourceColumn: "Cl-Ray" },
-                { label: "Phosphate", location: "Ray", metricType: "Phosphate", sourceColumn: "PO4-Ray" },
-                { label: "pH", location: "Ray", metricType: "pH", sourceColumn: "pH-Ray" }
-            ]
-        },
-        {
-            groupName: "Filter 1",
-            fields: [
-                { label: "Feed Pressure", location: "Filter 1", metricType: "Feed Pressure", sourceColumn: "Filter 1 Feed Pressure" },
-                { label: "Feed Flow", location: "Filter 1", metricType: "Feed Flow", sourceColumn: "Filter 1 Feed Flow" },
-                { label: "Filtrate Pressure", location: "Filter 1", metricType: "Filtrate Pressure", sourceColumn: "Filter 1 Filtrate Pressure" },
-                { label: "Filtrate Flow", location: "Filter 1", metricType: "Filtrate Flow", sourceColumn: "Filter 1 Filtrate Flow" },
-                { label: "TMP", location: "Filter 1", metricType: "TMP", sourceColumn: "Filter 1 TMP" },
-                { label: "Total Filter Run Time", location: "Filter 1", metricType: "Total Filter Run Time", sourceColumn: "Filter 1 Total Filter Run Time" },
-                { label: "Total Filtration Flow Yesterday", location: "Filter 1", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 1 Total Filtration Flow Yesterday" },
-                { label: "Pressure Decay", location: "Filter 1", metricType: "Pressure Decay", sourceColumn: "Filter 1 Pressure Decay" }
-            ]
-        },
-        {
-            groupName: "Filter 2",
-            fields: [
-                { label: "Feed Pressure", location: "Filter 2", metricType: "Feed Pressure", sourceColumn: "Filter 2 Feed Pressure" },
-                { label: "Feed Flow", location: "Filter 2", metricType: "Feed Flow", sourceColumn: "Filter 2 Feed Flow" },
-                { label: "Filtrate Pressure", location: "Filter 2", metricType: "Filtrate Pressure", sourceColumn: "Filter 2 Filtrate Pressure" },
-                { label: "Filtrate Flow", location: "Filter 2", metricType: "Filtrate Flow", sourceColumn: "Filter 2 Filtrate Flow" },
-                { label: "TMP", location: "Filter 2", metricType: "TMP", sourceColumn: "Filter 2 TMP" },
-                { label: "Total Filter Run Time", location: "Filter 2", metricType: "Total Filter Run Time", sourceColumn: "Filter 2 Total Filter Run Time" },
-                { label: "Total Filtration Flow Yesterday", location: "Filter 2", metricType: "Total Filtration Flow Yesterday", sourceColumn: "Filter 2 Total Filtration Flow Yesterday" },
-                { label: "Pressure Decay", location: "Filter 2", metricType: "Pressure Decay", sourceColumn: "Filter 2 Pressure Decay" }
-            ]
-        },
-        {
-            groupName: "Filter Plant",
-            fields: [
-                { label: "Meter Reading", location: "Filter Plant", metricType: "Meter Reading", sourceColumn: "Filter Plant" },
-                { label: "Chlorine", location: "Filter Plant", metricType: "Chlorine", sourceColumn: "Cl-F" },
-                { label: "Phosphate", location: "Filter Plant", metricType: "Phosphate", sourceColumn: "PO4-F" },
-                { label: "pH", location: "Filter Plant", metricType: "pH", sourceColumn: "pH-F" },
-                { label: "Temperature", location: "Filter Plant", metricType: "Temperature", sourceColumn: "Temp-F" },
-                { label: "Mt. Jefferson Meter", location: "Mt. Jefferson", metricType: "Meter Reading", sourceColumn: "Mt. Jefferson" }
-            ]
-        },
-        {
-            groupName: "Beaver Creek Pump Station",
-            fields: [
-                { label: "Pump 1", location: "Beaver Creek Pump 1", metricType: "Pump Status", sourceColumn: "Beaver Creek Pump 1" },
-                { label: "Pump 2", location: "Beaver Creek Pump 2", metricType: "Pump Status", sourceColumn: "Beaver Creek Pump 2" },
-                { label: "Generator", location: "Beaver Creek Generator", metricType: "Generator Status", sourceColumn: "Beaver Creek Generator" }
-            ]
-        },
-        {
-            groupName: "Greenfield Pump Station",
-            fields: [
-                { label: "Pump 1", location: "Greenfield Pump 1", metricType: "Pump Status", sourceColumn: "Greenfield Pump 1" },
-                { label: "Pump 2", location: "Greenfield Pump 2", metricType: "Pump Status", sourceColumn: "Greenfield Pump 2" },
-                { label: "Generator", location: "Greenfield Generator", metricType: "Generator Status", sourceColumn: "Greenfield Generator" }
-            ]
-        },
-        {
-            groupName: "Helen Blevins Pump Station",
-            fields: [
-                { label: "Pump 1", location: "Helen Blevins Pump 1", metricType: "Pump Status", sourceColumn: "Helen Blevins Pump 1" },
-                { label: "Pump 2", location: "Helen Blevins Pump 2", metricType: "Pump Status", sourceColumn: "Helen Blevins Pump 2" }
-            ]
-        },
-        {
-            groupName: "Dogget Pump Station",
-            fields: [
-                { label: "Pump 1", location: "Dogget Pump 1", metricType: "Pump Status", sourceColumn: "Dogget Pump 1" },
-                { label: "Pump 2", location: "Dogget Pump 2", metricType: "Pump Status", sourceColumn: "Dogget Pump 2" }
-            ]
-        }
-    ];
-
-    const values = {};
+    const urlParams = new URLSearchParams(window.location.search);
+    const timestamp = urlParams.get("timestamp");
 
     async function loadEntry() {
-        if (!originalTimestamp) {
-            document.getElementById("message").innerText = "No timestamp was provided.";
+        if (!timestamp) {
+            showError("Missing timestamp.");
             return;
         }
 
-            const originalDate = new Date(originalTimestamp);
-
-            document.getElementById("entryDate").value =
-                originalDate.getFullYear() + "-" +
-                String(originalDate.getMonth() + 1).padStart(2, "0") + "-" +
-                String(originalDate.getDate()).padStart(2, "0");
-
-            document.getElementById("entryTime").value =
-                String(originalDate.getHours()).padStart(2, "0") + ":" +
-                String(originalDate.getMinutes()).padStart(2, "0") + ":" +
-                String(originalDate.getSeconds()).padStart(2, "0");
-
-        const response = await fetch(`/api/scada/daily-entry?timestamp=${encodeURIComponent(originalTimestamp)}`);
+        const response = await fetch(`/api/scada/daily-entry?timestamp=${encodeURIComponent(timestamp)}`);
 
         if (!response.ok) {
-            document.getElementById("message").innerText = "Error loading daily entry.";
+            showError("Unable to load entry.");
             return;
         }
 
-        const entries = await response.json();
+        entries = await response.json();
 
-        entries.forEach(item => {
-            const key = `${item.location}|${item.metricType}|${item.sourceColumn}`;
-            values[key] = item.value;
-        });
-
-        renderFields();
+        renderTable();
     }
 
-    function renderFields() {
-        const panel = document.getElementById("entryPanel");
+    function renderTable() {
+        const body = document.getElementById("entriesBody");
+        body.innerHTML = "";
 
-        panel.innerHTML = fieldGroups.map(group => `
-            <div class="entry-group">
-                <h2>${group.groupName}</h2>
-
-                ${group.fields.map(field => {
-                    const key = `${field.location}|${field.metricType}|${field.sourceColumn}`;
-                    const value = values[key] ?? "";
-
-                    return `
-                        <div class="field-row">
-                            <label>${field.label}</label>
-                            <input
-                                type="number"
-                                inputmode="decimal"
-                                pattern="[0-9]*"
-                                step="0.01"
-                                value="${value}"
-                                data-location="${field.location}"
-                                data-metric="${field.metricType}"
-                                data-source="${field.sourceColumn}"
-                                disabled />
-                        </div>
-                    `;
-                }).join("")}
-            </div>
-        `).join("");
-    }
-
-        function enableEditing() {
-        const confirmEdit = confirm("Enable editing for this daily entry? Changes can affect the database.");
-
-        if (!confirmEdit) return;
-
-        document.querySelectorAll("#entryPanel input").forEach(input => {
-            input.disabled = false;
-        });
-
-        document.getElementById("entryDate").disabled = false;
-        document.getElementById("entryTime").disabled = false;
-
-        document.getElementById("saveBtn").disabled = false;
-        document.getElementById("editBtn").disabled = true;
-
-        document.getElementById("message").innerText = "Editing enabled. Make changes, then click Save Changes.";
-        document.getElementById("message").style.color = "#92400e";
-    }
-    
-    async function saveEntry() {
-        if (document.getElementById("saveBtn").disabled) {
-            alert("Click Edit Entry before saving changes.");
-            return;
-    }
-        const date = document.getElementById("entryDate").value;
-        const time = document.getElementById("entryTime").value;
-
-        if (!date || !time) {
-            alert("Please enter both date and time.");
+        if (!entries || entries.length === 0) {
+            body.innerHTML = `
+                <tr>
+                    <td colspan="5">No entry data found.</td>
+                </tr>
+            `;
             return;
         }
 
-        const newTimestamp = `${date}T${time}`;
+        entries.forEach((entry, index) => {
+            const timestamp = new Date(entry.timestamp);
 
-        const inputs = document.querySelectorAll("#entryPanel input");
-        const readings = [];
+            const dateValue =
+                timestamp.getFullYear() + "-" +
+                String(timestamp.getMonth() + 1).padStart(2, "0") + "-" +
+                String(timestamp.getDate()).padStart(2, "0");
 
-        inputs.forEach(input => {
-            readings.push({
-                location: input.dataset.location,
-                metricType: input.dataset.metric,
-                sourceColumn: input.dataset.source,
-                value: input.value === "" ? null : parseFloat(input.value)
-            });
+            const timeValue =
+                String(timestamp.getHours()).padStart(2, "0") + ":" +
+                String(timestamp.getMinutes()).padStart(2, "0") + ":" +
+                String(timestamp.getSeconds()).padStart(2, "0");
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>
+                    <input type="date"
+                           value="${dateValue}"
+                           onchange="updateDate(${index}, this.value)"
+                           ${editMode ? "" : "disabled"} />
+                </td>
+
+                <td>
+                    <input type="time"
+                           step="1"
+                           value="${timeValue}"
+                           onchange="updateTime(${index}, this.value)"
+                           ${editMode ? "" : "disabled"} />
+                </td>
+
+                <td>${entry.location}</td>
+
+                <td>${entry.metricType}</td>
+
+                <td>
+                    <input type="number"
+                           step="0.001"
+                           value="${entry.value ?? ''}"
+                           onchange="updateValue(${index}, this.value)"
+                           ${editMode ? "" : "disabled"} />
+                </td>
+            `;
+
+            body.appendChild(row);
         });
+    }
 
-        const response = await fetch("/api/scada/daily-entry/update", {
+    function enableEditMode() {
+        editMode = true;
+
+        document.getElementById("saveButton").disabled = false;
+
+        renderTable();
+    }
+
+    function updateDate(index, value) {
+        const existing = new Date(entries[index].timestamp);
+
+        const time =
+            String(existing.getHours()).padStart(2, "0") + ":" +
+            String(existing.getMinutes()).padStart(2, "0") + ":" +
+            String(existing.getSeconds()).padStart(2, "0");
+
+        entries[index].timestamp = `${value}T${time}`;
+    }
+
+    function updateTime(index, value) {
+        const existing = new Date(entries[index].timestamp);
+
+        const date =
+            existing.getFullYear() + "-" +
+            String(existing.getMonth() + 1).padStart(2, "0") + "-" +
+            String(existing.getDate()).padStart(2, "0");
+
+        entries[index].timestamp = `${date}T${value}`;
+    }
+
+    function updateValue(index, value) {
+        entries[index].value = value === "" ? null : parseFloat(value);
+    }
+
+    async function saveAllChanges() {
+        const response = await fetch("/api/scada/update-daily-entry", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                originalTimestamp: originalTimestamp,
-                timestamp: newTimestamp,
-                readings: readings
-            })
+            body: JSON.stringify(entries)
         });
 
-        const message = document.getElementById("message");
-
         if (response.ok) {
-            message.innerText = "Daily entry updated successfully.";
-            message.style.color = "#047857";
+            showSuccess("Changes saved successfully.");
+
+            editMode = false;
+
+            document.getElementById("saveButton").disabled = true;
+
+            await loadEntry();
         } else {
-            message.innerText = "Error updating daily entry.";
-            message.style.color = "#b91c1c";
+            const error = await response.text();
+            showError("Error saving changes: " + error);
         }
+    }
+
+    function showSuccess(message) {
+        const el = document.getElementById("message");
+        el.innerText = message;
+        el.style.color = "#047857";
+    }
+
+    function showError(message) {
+        const el = document.getElementById("message");
+        el.innerText = message;
+        el.style.color = "#b91c1c";
     }
 
     loadEntry();
