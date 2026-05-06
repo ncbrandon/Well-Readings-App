@@ -20,6 +20,7 @@ namespace Well_Readings.Data
         public DbSet<Plant> Plants { get; set; }
         public DbSet<WellAlarm> WellAlarms => Set<WellAlarm>();
         public DbSet<MaintenanceSiteStatus> MaintenanceSiteStatuses { get; set; }
+        public DbSet<ValidMeterLocation> ValidMeterLocations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -116,6 +117,21 @@ namespace Well_Readings.Data
                 entity.Property(x => x.UpdatedAt)
                     .IsRequired();
             });
+
+            modelBuilder.Entity<ValidMeterLocation>().HasData(
+                new ValidMeterLocation { Id = 1, Location = "Reeves Well" },
+                new ValidMeterLocation { Id = 2, Location = "Reeves Well A" },
+                new ValidMeterLocation { Id = 3, Location = "Park Well" },
+                new ValidMeterLocation { Id = 4, Location = "Park Well A" },
+                new ValidMeterLocation { Id = 5, Location = "Park Well B" },
+                new ValidMeterLocation { Id = 6, Location = "Woods" },
+                new ValidMeterLocation { Id = 7, Location = "Catawissa" },
+                new ValidMeterLocation { Id = 8, Location = "New" },
+                new ValidMeterLocation { Id = 9, Location = "Oakwood" },
+                new ValidMeterLocation { Id = 10, Location = "Ray" },
+                new ValidMeterLocation { Id = 11, Location = "Filter Plant" },
+                new ValidMeterLocation { Id = 12, Location = "Mt. Jefferson" }
+            );
         }
     }
 }

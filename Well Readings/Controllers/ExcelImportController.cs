@@ -76,6 +76,16 @@ namespace Well_Readings.Controllers
 
                     if (!TryGetDecimal(cell, out var value))
                         continue;
+                    var validLocations = await _context.ValidMeterLocations
+                        .Select(x => x.Location)
+                        .ToListAsync();
+
+                    if (mapping.MetricType == "Meter Reading" &&
+                        !validLocations.Contains(mapping.Location))
+                    {
+                        skipped++;
+                        continue;
+                    }
 
                     var existing = await _context.ScadaHistoryPoints.FirstOrDefaultAsync(x =>
                         x.Timestamp == timestamp &&

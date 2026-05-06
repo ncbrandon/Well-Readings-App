@@ -239,7 +239,18 @@ namespace Well_Readings.Controllers
                 if (string.IsNullOrWhiteSpace(reading.SourceColumn))
                     reading.SourceColumn = $"{reading.Location} - {reading.MetricType}";
             }
+            var validLocations = await _context.ValidMeterLocations
+                .Select(x => x.Location)
+                .ToListAsync();
 
+            foreach (var reading in readings)
+            {
+                if (reading.MetricType == "Meter Reading" &&
+                    !validLocations.Contains(reading.Location))
+                {
+                    return BadRequest($"Invalid meter location: {reading.Location}");
+                }
+            }
             _context.ScadaHistoryPoints.AddRange(readings);
             await _context.SaveChangesAsync();
 
@@ -463,40 +474,38 @@ namespace Well_Readings.Controllers
         {
             endDate = endDate.Date.AddDays(1).AddTicks(-1);
 
+            var validLocations = await _context.ValidMeterLocations
+                .Select(x => x.Location)
+                .ToListAsync();
+
             var points = await _context.ScadaHistoryPoints
-                .Where(x => x.Timestamp <= endDate)
+                .Where(x =>
+                    x.MetricType == "Meter Reading" &&
+                    validLocations.Contains(x.Location) &&
+                    x.Timestamp <= endDate)
                 .OrderBy(x => x.Timestamp)
                 .ToListAsync();
 
             decimal totalGallons = 0;
 
-            foreach (var site in GetReportSites().Values)
+            var grouped = points
+                .Where(x => x.Timestamp.Date >= startDate.Date && x.Timestamp.Date <= endDate.Date)
+                .GroupBy(x => x.Location);
+
+            foreach (var group in grouped)
             {
-                foreach (var meter in site.Meters)
-                {
-                    var meterPoints = points
-                        .Where(x => x.Location == meter.Location && x.MetricType == meter.MetricType)
-                        .OrderBy(x => x.Timestamp)
-                        .ToList();
+                var values = group
+                    .Where(x => x.Value.HasValue)
+                    .Select(x => x.Value!.Value)
+                    .ToList();
 
-                    foreach (var current in meterPoints.Where(x =>
-                        x.Timestamp.Date >= startDate.Date &&
-                        x.Timestamp.Date <= endDate.Date))
-                    {
-                        var previous = meterPoints
-                            .Where(x => x.Timestamp < current.Timestamp)
-                            .OrderByDescending(x => x.Timestamp)
-                            .FirstOrDefault();
+                if (values.Count < 2)
+                    continue;
 
-                        if (previous == null || current.Value == null || previous.Value == null)
-                            continue;
+                var gallons = values.Max() - values.Min();
 
-                        var gallons = current.Value.Value - previous.Value.Value;
-
-                        if (gallons > 0)
-                            totalGallons += gallons;
-                    }
-                }
+                if (gallons > 0)
+                    totalGallons += gallons;
             }
 
             return Ok(new

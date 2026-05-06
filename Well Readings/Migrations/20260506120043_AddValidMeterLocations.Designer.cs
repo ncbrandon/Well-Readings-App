@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Well_Readings.Data;
 
@@ -11,9 +12,11 @@ using Well_Readings.Data;
 namespace Well_Readings.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260506120043_AddValidMeterLocations")]
+    partial class AddValidMeterLocations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -215,6 +218,13 @@ namespace Well_Readings.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IncludeInMeterTotal")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -227,61 +237,85 @@ namespace Well_Readings.Migrations
                         new
                         {
                             Id = 1,
+                            DisplayName = "Reeves Well Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Reeves Well"
                         },
                         new
                         {
                             Id = 2,
+                            DisplayName = "Reeves Well A Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Reeves Well A"
                         },
                         new
                         {
                             Id = 3,
+                            DisplayName = "Park Well Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Park Well"
                         },
                         new
                         {
                             Id = 4,
+                            DisplayName = "Park Well A Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Park Well A"
                         },
                         new
                         {
                             Id = 5,
+                            DisplayName = "Park Well B Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Park Well B"
                         },
                         new
                         {
                             Id = 6,
+                            DisplayName = "Woods Well Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Woods"
                         },
                         new
                         {
                             Id = 7,
+                            DisplayName = "Catawissa Well Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Catawissa"
                         },
                         new
                         {
                             Id = 8,
+                            DisplayName = "New Well Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "New"
                         },
                         new
                         {
                             Id = 9,
+                            DisplayName = "Oakwood Well Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Oakwood"
                         },
                         new
                         {
                             Id = 10,
+                            DisplayName = "Ray Well Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Ray"
                         },
                         new
                         {
                             Id = 11,
+                            DisplayName = "Filter Plant Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Filter Plant"
                         },
                         new
                         {
                             Id = 12,
+                            DisplayName = "Mt. Jefferson Meter Reading",
+                            IncludeInMeterTotal = true,
                             Location = "Mt. Jefferson"
                         });
                 });
