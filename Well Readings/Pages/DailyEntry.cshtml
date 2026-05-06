@@ -85,7 +85,7 @@
                 </td>
                 <td>
                     <a href="/DailyEntryEdit?timestamp=${encodeURIComponent(entry.timestamp)}">
-                        ${new Date(entry.timestamp).toLocaleString()}
+                        ${new Date(entry.timestamp).toLocaleString(undefined, { hour12: false })}
                     </a>
                 </td>
                 <td>${entry.count}</td>
