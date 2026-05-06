@@ -31,7 +31,8 @@ namespace Well_Readings.Controllers
             using var workbook = new XLWorkbook(stream);
 
             var worksheet =
-                workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Form Responses 1", StringComparison.OrdinalIgnoreCase))
+                workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Export", StringComparison.OrdinalIgnoreCase))
+                ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Form Responses 1", StringComparison.OrdinalIgnoreCase))
                 ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Data", StringComparison.OrdinalIgnoreCase))
                 ?? workbook.Worksheets.First();
 
@@ -49,39 +50,42 @@ namespace Well_Readings.Controllers
                     headers[col] = header;
             }
 
-            for (var row = 2; row <= lastRow; row++)
+            var isNormalizedExport =
+                headers.Any(x => x.Value.Equals("Timestamp", StringComparison.OrdinalIgnoreCase)) &&
+                headers.Any(x => x.Value.Equals("Location", StringComparison.OrdinalIgnoreCase)) &&
+                headers.Any(x => x.Value.Equals("MetricType", StringComparison.OrdinalIgnoreCase)) &&
+                headers.Any(x => x.Value.Equals("SourceColumn", StringComparison.OrdinalIgnoreCase)) &&
+                headers.Any(x => x.Value.Equals("Value", StringComparison.OrdinalIgnoreCase));
+
+            if (isNormalizedExport)
             {
-                var timestampCell = worksheet.Row(row).Cell(1);
+                var timestampCol = headers.First(x => x.Value.Equals("Timestamp", StringComparison.OrdinalIgnoreCase)).Key;
+                var locationCol = headers.First(x => x.Value.Equals("Location", StringComparison.OrdinalIgnoreCase)).Key;
+                var metricTypeCol = headers.First(x => x.Value.Equals("MetricType", StringComparison.OrdinalIgnoreCase)).Key;
+                var sourceColumnCol = headers.First(x => x.Value.Equals("SourceColumn", StringComparison.OrdinalIgnoreCase)).Key;
+                var valueCol = headers.First(x => x.Value.Equals("Value", StringComparison.OrdinalIgnoreCase)).Key;
 
-                if (!TryGetDateTime(timestampCell, out var timestamp))
+                for (var row = 2; row <= lastRow; row++)
                 {
-                    skipped++;
-                    continue;
-                }
-
-                foreach (var headerPair in headers)
-                {
-                    var col = headerPair.Key;
-                    var columnName = headerPair.Value;
-
-                    if (columnName.Equals("Timestamp", StringComparison.OrdinalIgnoreCase))
+                    if (!TryGetDateTime(worksheet.Row(row).Cell(timestampCol), out var timestamp))
+                    {
+                        skipped++;
                         continue;
+                    }
 
-                    var mapping = GetMapping(columnName);
+                    var location = worksheet.Row(row).Cell(locationCol).GetString().Trim();
+                    var metricType = worksheet.Row(row).Cell(metricTypeCol).GetString().Trim();
+                    var sourceColumn = worksheet.Row(row).Cell(sourceColumnCol).GetString().Trim();
 
-                    if (mapping == null)
+                    if (string.IsNullOrWhiteSpace(location) ||
+                        string.IsNullOrWhiteSpace(metricType) ||
+                        string.IsNullOrWhiteSpace(sourceColumn))
+                    {
+                        skipped++;
                         continue;
+                    }
 
-                    var cell = worksheet.Row(row).Cell(col);
-
-                    if (!TryGetDecimal(cell, out var value))
-                        continue;
-                    var validLocations = await _context.ValidMeterLocations
-                        .Select(x => x.Location)
-                        .ToListAsync();
-
-                    if (mapping.MetricType == "Meter Reading" &&
-                        !validLocations.Contains(mapping.Location))
+                    if (!TryGetDecimal(worksheet.Row(row).Cell(valueCol), out var value))
                     {
                         skipped++;
                         continue;
@@ -89,9 +93,9 @@ namespace Well_Readings.Controllers
 
                     var existing = await _context.ScadaHistoryPoints.FirstOrDefaultAsync(x =>
                         x.Timestamp == timestamp &&
-                        x.Location == mapping.Location &&
-                        x.MetricType == mapping.MetricType &&
-                        x.SourceColumn == mapping.SourceColumn);
+                        x.Location == location &&
+                        x.MetricType == metricType &&
+                        x.SourceColumn == sourceColumn);
 
                     if (existing == null)
                     {
@@ -99,9 +103,9 @@ namespace Well_Readings.Controllers
                         {
                             Id = Guid.NewGuid(),
                             Timestamp = timestamp,
-                            Location = mapping.Location,
-                            MetricType = mapping.MetricType,
-                            SourceColumn = mapping.SourceColumn,
+                            Location = location,
+                            MetricType = metricType,
+                            SourceColumn = sourceColumn,
                             Value = value
                         });
 
@@ -114,6 +118,64 @@ namespace Well_Readings.Controllers
                     }
                 }
             }
+            else
+            {
+                for (var row = 2; row <= lastRow; row++)
+                {
+                    var timestampCell = worksheet.Row(row).Cell(1);
+
+                    if (!TryGetDateTime(timestampCell, out var timestamp))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    foreach (var headerPair in headers)
+                    {
+                        var col = headerPair.Key;
+                        var columnName = headerPair.Value;
+
+                        if (columnName.Equals("Timestamp", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        var mapping = GetMapping(columnName);
+
+                        if (mapping == null)
+                            continue;
+
+                        var cell = worksheet.Row(row).Cell(col);
+
+                        if (!TryGetDecimal(cell, out var value))
+                            continue;
+
+                        var existing = await _context.ScadaHistoryPoints.FirstOrDefaultAsync(x =>
+                            x.Timestamp == timestamp &&
+                            x.Location == mapping.Location &&
+                            x.MetricType == mapping.MetricType &&
+                            x.SourceColumn == mapping.SourceColumn);
+
+                        if (existing == null)
+                        {
+                            _context.ScadaHistoryPoints.Add(new ScadaHistoryPoint
+                            {
+                                Id = Guid.NewGuid(),
+                                Timestamp = timestamp,
+                                Location = mapping.Location,
+                                MetricType = mapping.MetricType,
+                                SourceColumn = mapping.SourceColumn,
+                                Value = value
+                            });
+
+                            imported++;
+                        }
+                        else
+                        {
+                            existing.Value = value;
+                            updated++;
+                        }
+                    }
+                }
+            }
 
             await _context.SaveChangesAsync();
 
@@ -122,8 +184,59 @@ namespace Well_Readings.Controllers
                 imported,
                 updated,
                 skipped,
-                sheet = worksheet.Name
+                sheet = worksheet.Name,
+                format = isNormalizedExport ? "Export" : "Google Sheet"
             });
+        }
+
+        [HttpGet("export")]
+        public async Task<IActionResult> ExportScadaExcel(DateTime startDate, DateTime endDate)
+        {
+            var endExclusive = endDate.Date.AddDays(1);
+
+            var points = await _context.ScadaHistoryPoints
+                .Where(x => x.Timestamp >= startDate.Date && x.Timestamp < endExclusive)
+                .OrderBy(x => x.Timestamp)
+                .ThenBy(x => x.Location)
+                .ThenBy(x => x.MetricType)
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Export");
+
+            worksheet.Cell(1, 1).Value = "Timestamp";
+            worksheet.Cell(1, 2).Value = "Location";
+            worksheet.Cell(1, 3).Value = "MetricType";
+            worksheet.Cell(1, 4).Value = "SourceColumn";
+            worksheet.Cell(1, 5).Value = "Value";
+
+            var row = 2;
+
+            foreach (var point in points)
+            {
+                worksheet.Cell(row, 1).Value = point.Timestamp;
+                worksheet.Cell(row, 1).Style.DateFormat.Format = "yyyy-mm-dd hh:mm:ss";
+
+                worksheet.Cell(row, 2).Value = point.Location;
+                worksheet.Cell(row, 3).Value = point.MetricType;
+                worksheet.Cell(row, 4).Value = point.SourceColumn;
+                worksheet.Cell(row, 5).Value = point.Value;
+
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            var fileName = $"ScadaExport_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.xlsx";
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName
+            );
         }
 
         private static ImportMapping? GetMapping(string column)

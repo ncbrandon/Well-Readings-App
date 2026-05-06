@@ -1,52 +1,102 @@
 ﻿@page
 @model Well_Readings.Pages.ExcelImportModel
 
-<h1>Excel Import</h1>
+<h1>Excel Import / Export</h1>
 
-<p>
-    Upload your Google Sheet / Excel file. This will import readings into the database.
-</p>
+<section class="card">
+    <h2>Import Excel</h2>
 
-<div class="import-box">
+    <p>
+        Upload your Excel file to import readings into the database.
+    </p>
+
     <input type="file" id="excelFile" accept=".xlsx" />
     <button type="button" onclick="uploadExcel()">Import Excel</button>
-</div>
 
-<div id="result" class="result"></div>
+    <div id="importResult" class="result"></div>
+</section>
+
+<section class="card">
+    <h2>Export Logged Entries</h2>
+
+    <p>
+        Select a date range and export logged entries. You can edit the file and import it back later.
+    </p>
+
+    <div class="row">
+        <label>Beginning Date</label>
+        <input type="date" id="exportStartDate" />
+
+        <label>Ending Date</label>
+        <input type="date" id="exportEndDate" />
+
+        <button type="button" onclick="exportExcel()">Export Excel</button>
+    </div>
+
+    <div id="exportResult" class="result"></div>
+</section>
 
 <style>
-    .import-box {
+    .card {
         background: #f3f4f6;
+        color: #111827;
         padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
     }
 
-        .import-box input {
-            margin-right: 12px;
+        .card h2,
+        .card label {
+            color: #111827;
         }
 
-        .import-box button {
-            padding: 10px 18px;
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+    input {
+        padding: 8px;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        margin-right: 10px;
+        background: white;
+        color: #111827;
+    }
+
+    button {
+        padding: 10px 18px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
 
     .result {
+        margin-top: 15px;
         font-weight: bold;
-        color: #111827;
         white-space: pre-line;
     }
 </style>
 
 <script>
+    setDefaultExportDates();
+
+    function setDefaultExportDates() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        document.getElementById("exportStartDate").valueAsDate = firstDay;
+        document.getElementById("exportEndDate").valueAsDate = today;
+    }
+
     async function uploadExcel() {
         const fileInput = document.getElementById("excelFile");
-        const result = document.getElementById("result");
+        const result = document.getElementById("importResult");
 
         if (!fileInput.files.length) {
             alert("Please choose an Excel file first.");
@@ -56,6 +106,7 @@
         const formData = new FormData();
         formData.append("file", fileInput.files[0]);
 
+        result.style.color = "#111827";
         result.innerText = "Importing...";
 
         const response = await fetch("/api/excel-import/scada", {
@@ -79,5 +130,22 @@
             "Imported: " + data.imported + "\n" +
             "Updated: " + data.updated + "\n" +
             "Skipped rows: " + data.skipped;
+    }
+
+    function exportExcel() {
+        const startDate = document.getElementById("exportStartDate").value;
+        const endDate = document.getElementById("exportEndDate").value;
+        const result = document.getElementById("exportResult");
+
+        if (!startDate || !endDate) {
+            alert("Please select a beginning and ending date.");
+            return;
+        }
+
+        result.style.color = "#047857";
+        result.innerText = "Export started.";
+
+        window.location.href =
+            `/api/excel-import/export?startDate=${startDate}&endDate=${endDate}`;
     }
 </script>
