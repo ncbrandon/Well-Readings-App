@@ -70,17 +70,13 @@
         <input type="date" id="meterStartDate" />
 
         <label>Ending Date</label>
-        <input type="date" id="meterEndDate" />
+
+        <div class="meter-ending-box">
+            <input type="date" id="meterEndDate" />
+            <div class="meter-warning">DAY AFTER METERS READ</div>
+        </div>
 
         <button type="button" onclick="loadMeterTotalReport()">Run Total Report</button>
-
-        <div></div>
-        <div></div>
-        <div></div>
-
-        <div class="meter-warning">
-            DAY AFTER METERS READ
-        </div>
     </div>
 
     <div class="total-box">
@@ -203,6 +199,69 @@
             cursor: pointer;
         }
 
+    .meter-filter-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+        .meter-filter-row label {
+            font-weight: bold;
+            color: #111827;
+            padding-top: 9px;
+        }
+
+        .meter-filter-row input {
+            padding: 8px;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #111827;
+            background: white;
+            width: 140px;
+        }
+
+        .meter-filter-row button {
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 0;
+        }
+
+    .meter-ending-box {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .meter-warning {
+        color: #dc2626;
+        font-weight: bold;
+        font-size: 14px;
+        animation: flashWarning 1s infinite;
+        white-space: nowrap;
+        line-height: 1;
+    }
+
+    @@keyframes flashWarning {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.2;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
     .report-table {
         width: 100%;
         border-collapse: collapse;
@@ -262,62 +321,6 @@
         color: #374151;
         font-weight: bold;
     }
-
-    .meter-filter-row {
-        display: grid;
-        grid-template-columns: auto 140px auto 140px auto;
-        grid-template-rows: auto auto;
-        gap: 8px 12px;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-        .meter-filter-row label {
-            font-weight: bold;
-            color: #111827;
-        }
-
-        .meter-filter-row input {
-            padding: 8px;
-            border: 1px solid #374151;
-            border-radius: 6px;
-            color: #111827;
-            background: white;
-        }
-
-        .meter-filter-row button {
-            padding: 10px 18px;
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-    .meter-warning {
-        grid-column: 4;
-        color: #dc2626;
-        font-weight: bold;
-        font-size: 14px;
-        animation: flashWarning 1s infinite;
-        white-space: nowrap;
-    }
-
-    @@keyframes flashWarning {
-        0% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.2;
-        }
-
-        100% {
-            opacity: 1;
-        }
-    }
-
 </style>
 
 <script>
@@ -329,13 +332,10 @@
 
             document.getElementById("siteStartDate").valueAsDate = firstDay;
             document.getElementById("siteEndDate").valueAsDate = today;
-
             document.getElementById("meterStartDate").valueAsDate = firstDay;
             document.getElementById("meterEndDate").valueAsDate = today;
-
             document.getElementById("pumpStartDate").valueAsDate = firstDay;
             document.getElementById("pumpEndDate").valueAsDate = today;
-
             document.getElementById("ncMorStartDate").valueAsDate = firstDay;
             document.getElementById("ncMorEndDate").valueAsDate = today;
         }
@@ -594,45 +594,33 @@
             alert("NC MOR script copied.");
         }
 
-            function formatDateTime(value) {
-        if (!value) return "";
+        function formatDateTime(value) {
+            if (!value) return "";
 
-        return new Date(value).toLocaleString(undefined, {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false
-        });
-    }
+            return new Date(value).toLocaleString(undefined, {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false
+            });
+        }
 
-    function formatDate(value) {
-        if (!value) return "";
+        function formatValue(value) {
+            if (value === null || value === undefined || value === "") return "";
 
-        return new Date(value).toLocaleDateString(undefined, {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit"
-        });
-    }
+            return Number(value).toLocaleString(undefined, {
+                maximumFractionDigits: 3
+            });
+        }
 
-    function formatValue(value) {
-        if (value === null || value === undefined || value === "")
-            return "";
+        function formatNumber(value) {
+            if (value === null || value === undefined || value === "") return "0";
 
-        return Number(value).toLocaleString(undefined, {
-            maximumFractionDigits: 3
-        });
-    }
-
-    function formatNumber(value) {
-        if (value === null || value === undefined || value === "")
-            return "0";
-
-        return Number(value).toLocaleString(undefined, {
-            maximumFractionDigits: 0
-        });
-    }
+            return Number(value).toLocaleString(undefined, {
+                maximumFractionDigits: 0
+            });
+        }
 </script>
