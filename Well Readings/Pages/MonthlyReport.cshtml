@@ -69,15 +69,27 @@
         <label>Beginning Date</label>
         <input type="date" id="meterStartDate" />
 
-    
-    <div class="ending-date-warning">
-        <label>Ending Date</label>
-        <input type="date" id="meterEndDate" />
 
-     <div class="meter-warning">
-         DAY AFTER METERS READ
-     </div>
-     </div>
+        <div class="ending-date-warning">
+            <label>Ending Date</label>
+
+            <div class="filter-row">
+                <label>Beginning Date</label>
+                <input type="date" id="meterStartDate" />
+
+                <div class="ending-date-block">
+                    <div class="ending-date-top">
+                        <label>Ending Date</label>
+                        <input type="date" id="meterEndDate" />
+                    </div>
+
+                    <div class="meter-warning">
+                        DAY AFTER METERS READ
+                    </div>
+                </div>
+
+                <button type="button" onclick="loadMeterTotalReport()">Run Total Report</button>
+            </div>
 
         <button type="button" onclick="loadMeterTotalReport()">Run Total Report</button>
     </div>
@@ -281,10 +293,16 @@
         }
     }
 
-    .ending-date-warning {
+    .ending-date-block {
         display: flex;
         flex-direction: column;
         gap: 4px;
+    }
+
+    .ending-date-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 
     .meter-warning {
@@ -292,6 +310,8 @@
         font-weight: bold;
         font-size: 14px;
         animation: flashWarning 1s infinite;
+        margin-left: 112px;
+        white-space: nowrap;
     }
 
     @@keyframes flashWarning {
