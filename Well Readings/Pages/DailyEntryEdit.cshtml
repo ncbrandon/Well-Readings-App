@@ -277,9 +277,17 @@
             return;
         }
 
-        const originalDate = new Date(originalTimestamp);
-        document.getElementById("entryDate").value = originalDate.toISOString().slice(0, 10);
-        document.getElementById("entryTime").value = originalDate.toTimeString().slice(0, 8);
+            const originalDate = new Date(originalTimestamp);
+
+            document.getElementById("entryDate").value =
+                originalDate.getFullYear() + "-" +
+                String(originalDate.getMonth() + 1).padStart(2, "0") + "-" +
+                String(originalDate.getDate()).padStart(2, "0");
+
+            document.getElementById("entryTime").value =
+                String(originalDate.getHours()).padStart(2, "0") + ":" +
+                String(originalDate.getMinutes()).padStart(2, "0") + ":" +
+                String(originalDate.getSeconds()).padStart(2, "0");
 
         const response = await fetch(`/api/scada/daily-entry?timestamp=${encodeURIComponent(originalTimestamp)}`);
 
@@ -361,7 +369,7 @@
             return;
         }
 
-        const newTimestamp = new Date(`${date}T${time}`).toISOString();
+        const newTimestamp = `${date}T${time}`;
 
         const inputs = document.querySelectorAll("#entryPanel input");
         const readings = [];
