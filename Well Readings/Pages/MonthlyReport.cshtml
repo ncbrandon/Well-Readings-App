@@ -265,6 +265,9 @@
 
     @@media (max-width: 800px) {
         .filter-row {
+            align-items: flex-start;
+        }
+        .filter-row {
             display: block;
         }
 
@@ -283,8 +286,8 @@
     }
 
     .ending-date-block {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-rows: auto auto;
         gap: 4px;
     }
 
@@ -294,6 +297,10 @@
         gap: 12px;
     }
 
+        .ending-date-top label {
+            margin: 0;
+        }
+
     .meter-warning {
         color: #dc2626;
         font-weight: bold;
@@ -301,6 +308,7 @@
         animation: flashWarning 1s infinite;
         margin-left: 112px;
         white-space: nowrap;
+        line-height: 1;
     }
 
     @@keyframes flashWarning {
