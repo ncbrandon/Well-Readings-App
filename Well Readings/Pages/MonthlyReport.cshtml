@@ -65,22 +65,22 @@
 <section class="report-card">
     <h2>Meter Reading Report</h2>
 
-    <div class="filter-row">
+    <div class="meter-filter-row">
         <label>Beginning Date</label>
         <input type="date" id="meterStartDate" />
 
-        <div class="ending-date-block">
-            <div class="ending-date-top">
-                <label>Ending Date</label>
-                <input type="date" id="meterEndDate" />
-            </div>
-
-            <div class="meter-warning">
-                DAY AFTER METERS READ
-            </div>
-        </div>
+        <label>Ending Date</label>
+        <input type="date" id="meterEndDate" />
 
         <button type="button" onclick="loadMeterTotalReport()">Run Total Report</button>
+
+        <div></div>
+        <div></div>
+        <div></div>
+
+        <div class="meter-warning">
+            DAY AFTER METERS READ
+        </div>
     </div>
 
     <div class="total-box">
@@ -263,52 +263,45 @@
         font-weight: bold;
     }
 
-    @@media (max-width: 800px) {
-        .filter-row {
-            align-items: flex-start;
-        }
-        .filter-row {
-            display: block;
-        }
-
-            .filter-row label,
-            .filter-row input,
-            .filter-row select,
-            .filter-row button {
-                display: block;
-                width: 100%;
-                margin-bottom: 10px;
-            }
-
-        .report-table {
-            font-size: 13px;
-        }
-    }
-
-    .ending-date-block {
+    .meter-filter-row {
         display: grid;
+        grid-template-columns: auto 140px auto 140px auto;
         grid-template-rows: auto auto;
-        gap: 4px;
-    }
-
-    .ending-date-top {
-        display: flex;
+        gap: 8px 12px;
         align-items: center;
-        gap: 12px;
+        margin-bottom: 20px;
     }
 
-        .ending-date-top label {
-            margin: 0;
+        .meter-filter-row label {
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .meter-filter-row input {
+            padding: 8px;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #111827;
+            background: white;
+        }
+
+        .meter-filter-row button {
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
         }
 
     .meter-warning {
+        grid-column: 4;
         color: #dc2626;
         font-weight: bold;
         font-size: 14px;
         animation: flashWarning 1s infinite;
-        margin-left: 112px;
         white-space: nowrap;
-        line-height: 1;
     }
 
     @@keyframes flashWarning {
