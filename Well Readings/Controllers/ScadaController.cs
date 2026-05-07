@@ -739,14 +739,17 @@ namespace Well_Readings.Controllers
                     .Select(x => x.Value)
                     .FirstOrDefaultAsync();
 
-                rows.Add(new
+                if (gallons > 0)
                 {
-                    date = date.ToString("MM/dd/yyyy"),
-                    time = latestTime?.ToString("HH:mm") ?? "",
-                    gallons,
-                    chlorine,
-                    phosphate
-                });
+                    rows.Add(new
+                    {
+                        date = date.ToString("MM/dd/yyyy"),
+                        time = latestTime?.ToString("HH:mm") ?? "",
+                        gallons,
+                        chlorine,
+                        phosphate
+                    });
+                }
             }
 
             return Ok(rows);
