@@ -558,18 +558,49 @@
 
             console.log("Filling row", index + 1, row);
 
-            await setNcValue(
-                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`),
-                row.time,
-                \`Row \${rowIndex} Time\`
-            );
+                if (row.code) {
+        await setNcValue(
+            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtCode`),
+            row.code,
+            `Row ${rowIndex} Code`
+        );
 
-            
-            await setNcValue(
-                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
-                row.chlorine,
-                \`Row \${rowIndex} Chlorine\`
-            );
+        await setNcValue(
+            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtLocation`),
+            row.location,
+            `Row ${rowIndex} Location`
+        );
+
+        await setNcValue(
+            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtTotalChlorine`),
+            row.chlorine,
+            `Row ${rowIndex} Chlorine`
+        );
+    } else {
+        await setNcValue(
+            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtTime`),
+            row.time,
+            `Row ${rowIndex} Time`
+        );
+
+        await setNcValue(
+            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtSourcePumped`),
+            Math.round(row.gallons),
+            `Row ${rowIndex} Source Pumped`
+        );
+
+        await setNcValue(
+            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtTotalChlorine`),
+            row.chlorine,
+            `Row ${rowIndex} Chlorine`
+        );
+
+        await setNcValue(
+            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtMonochloramine`),
+            row.phosphate,
+            `Row ${rowIndex} Phosphate`
+        );
+    }
 
             
             console.log("Finished row", index + 1);

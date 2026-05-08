@@ -661,7 +661,8 @@ namespace Well_Readings.Controllers
                 var distributionRows = await _context.DistributionPointEntries
                     .Where(x =>
                         x.EntryDate.Date >= startDate.Date &&
-                        x.EntryDate.Date <= endDate.Date)
+                        x.EntryDate.Date <= endDate.Date &&
+                        x.Chlorine != null)
                     .OrderBy(x => x.EntryDate)
                     .ThenBy(x => x.Code)
                     .ToListAsync();
@@ -669,13 +670,9 @@ namespace Well_Readings.Controllers
                 var distributionResult = distributionRows.Select(x => new
                 {
                     date = x.EntryDate.ToString("yyyy-MM-dd"),
-                    time = "08:00",
-                    gallons = 1,
-                    chlorine = x.Chlorine,
-                    phosphate = x.Phosphate,
-                    ph = x.Ph,
                     code = x.Code,
-                    location = x.Location
+                    location = x.Location,
+                    chlorine = x.Chlorine
                 });
 
                 return Ok(distributionResult);
