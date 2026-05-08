@@ -450,6 +450,31 @@ namespace Well_Readings.Controllers
                                 ? GetDailyValue(points, config.ChemistryLocations, "Temperature", current.Timestamp.Date)
                                 : null
                         });
+
+                        if (selectedSite == "Reeves Well Site" || selectedSite == "Park Well Site")
+                        {
+                            var siteDailyTotals = rows
+                                .Where(x =>
+                                    x.GetType().GetProperty("site")!.GetValue(x)!.ToString() == selectedSite)
+                                .GroupBy(x =>
+                                    ((DateTime)x.GetType().GetProperty("date")!.GetValue(x)!).Date)
+                                .Select(g => new
+                                {
+                                    Date = g.Key,
+                                    Gallons = g.Sum(x =>
+                                        (decimal)x.GetType().GetProperty("gallonsPumped")!.GetValue(x)!)
+                                })
+                                .ToList();
+
+                            summaryRows.Add(new
+                            {
+                                site = selectedSite,
+                                name = selectedSite + " Total",
+                                daysPumped = siteDailyTotals.Count(x => x.Gallons > 0),
+                                maxGallonsPumped = siteDailyTotals.Any() ? siteDailyTotals.Max(x => x.Gallons) : 0,
+                                totalGallonsPumped = siteDailyTotals.Sum(x => x.Gallons)
+                            });
+                        }
                     }
 
                     summaryRows.Add(new
@@ -457,7 +482,8 @@ namespace Well_Readings.Controllers
                         site = selectedSite,
                         name = meter.DisplayName,
                         daysPumped = dailyRows.Count(x => x.Gallons > 0),
-                        maxGallonsPumped = dailyRows.Any() ? dailyRows.Max(x => x.Gallons) : 0
+                        maxGallonsPumped = dailyRows.Any() ? dailyRows.Max(x => x.Gallons) : 0,
+                        totalGallonsPumped = dailyRows.Sum(x => x.Gallons)
                     });
                 }
             }
@@ -633,6 +659,32 @@ namespace Well_Readings.Controllers
         [HttpGet("nc-mor-report")]
         public async Task<IActionResult> GetNcMorReport(string site, DateTime startDate, DateTime endDate)
         {
+
+            if (site == "Distribution Points")
+            {
+                var distributionRows = await _context.DistributionPointEntries
+                    .Where(x =>
+                        x.EntryDate.Date >= startDate.Date &&
+                        x.EntryDate.Date <= endDate.Date)
+                    .OrderBy(x => x.EntryDate)
+                    .ThenBy(x => x.Code)
+                    .ToListAsync();
+
+                var distributionResult = distributionRows.Select(x => new
+                {
+                    date = x.EntryDate.ToString("yyyy-MM-dd"),
+                    time = "08:00",
+                    gallons = 1,
+                    chlorine = x.Chlorine,
+                    phosphate = x.Phosphate,
+                    ph = x.Ph,
+                    code = x.Code,
+                    location = x.Location
+                });
+
+                return Ok(distributionResult);
+            }
+
             var siteConfig = site switch
             {
                 "Reeves Well Site" => new

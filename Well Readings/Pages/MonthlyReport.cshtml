@@ -56,6 +56,7 @@
                 <th>Well / Filter</th>
                 <th>Days Pumped</th>
                 <th>Max Gallons Pumped</th>
+                <th>Total Gallons Pumped</th>
             </tr>
         </thead>
         <tbody id="summaryBody"></tbody>
@@ -134,6 +135,7 @@
             <option value="Oakwood">Oakwood</option>
             <option value="Ray">Ray</option>
             <option value="Filter Plant">Filter Plant</option>
+            <option value="Distribution Points">Distribution Points</option>
         </select>
 
         <label>Beginning Date</label>
@@ -395,7 +397,7 @@
             body.innerHTML = "";
 
             if (rows.length === 0) {
-                body.innerHTML = `<tr><td colspan="4">No summary found.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="5">No summary found.</td></tr>`;
                 return;
             }
 
@@ -407,6 +409,7 @@
                     <td>${row.name}</td>
                     <td>${row.daysPumped}</td>
                     <td>${formatNumber(row.maxGallonsPumped)}</td>
+                    <td>${formatNumber(row.totalGallonsPumped)}</td>
                 `;
 
                 body.appendChild(tr);
@@ -549,7 +552,9 @@
 
         for (let index = 0; index < data.length; index++) {
             const row = data[index];
-            const rowIndex = (index + 2).toString().padStart(2, "0");
+
+            const rowDate = new Date(row.date);
+            const rowIndex = (rowDate.getDate() + 1).toString().padStart(2, "0");;
 
             console.log("Filling row", index + 1, row);
 
@@ -559,24 +564,14 @@
                 \`Row \${rowIndex} Time\`
             );
 
-            await setNcValue(
-                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`),
-                Math.round(row.gallons),
-                \`Row \${rowIndex} Source Pumped\`
-            );
-
+            
             await setNcValue(
                 document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
                 row.chlorine,
                 \`Row \${rowIndex} Chlorine\`
             );
 
-            await setNcValue(
-                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`),
-                row.phosphate,
-                \`Row \${rowIndex} Phosphate\`
-            );
-
+            
             console.log("Finished row", index + 1);
             await sleep(1200);
         }
