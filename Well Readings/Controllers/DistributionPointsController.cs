@@ -98,24 +98,42 @@ namespace Well_Readings.Controllers
 
             var ws =
                 workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("DistributionPoints", StringComparison.OrdinalIgnoreCase))
+                ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Distribution Points", StringComparison.OrdinalIgnoreCase))
                 ?? workbook.Worksheets.First();
 
-            var lastRow = ws.LastRowUsed().RowNumber();
+            var lastRowUsed = ws.LastRowUsed();
+
+            if (lastRowUsed == null)
+                return BadRequest("The worksheet is empty.");
+
+            var lastRow = lastRowUsed.RowNumber();
 
             for (var row = 2; row <= lastRow; row++)
             {
-                if (!DateTime.TryParse(ws.Cell(row, 1).GetString(), out var entryDate))
+                var dateCell = ws.Cell(row, 1);
+
+                DateTime entryDate;
+
+                if (dateCell.TryGetValue<DateTime>(out var excelDate))
                 {
-                    if (ws.Cell(row, 1).TryGetValue<DateTime>(out var excelDate))
-                        entryDate = excelDate;
-                    else
-                    {
-                        skipped++;
-                        continue;
-                    }
+                    entryDate = excelDate.Date;
+                }
+                else if (DateTime.TryParse(dateCell.GetString(), out var parsedDate))
+                {
+                    entryDate = parsedDate.Date;
+                }
+                else
+                {
+                    skipped++;
+                    continue;
                 }
 
-                var code = ws.Cell(row, 2).GetString().Trim().PadLeft(3, '0');
+                var rawCode = ws.Cell(row, 2).GetString().Trim();
+
+                if (string.IsNullOrWhiteSpace(rawCode) && ws.Cell(row, 2).TryGetValue<int>(out var numericCode))
+                    rawCode = numericCode.ToString();
+
+                var code = rawCode.PadLeft(3, '0');
 
                 var location = Locations.FirstOrDefault(x => x.Code == code);
 
@@ -139,7 +157,7 @@ namespace Well_Readings.Controllers
                     _context.DistributionPointEntries.Add(new DistributionPointEntry
                     {
                         Id = Guid.NewGuid(),
-                        EntryDate = entryDate.Date,
+                        EntryDate = entryDate,
                         Code = code,
                         Location = location.Location,
                         Chlorine = chlorine,
@@ -167,7 +185,8 @@ namespace Well_Readings.Controllers
             {
                 imported,
                 updated,
-                skipped
+                skipped,
+                sheet = ws.Name
             });
         }
 
