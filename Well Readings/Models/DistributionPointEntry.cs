@@ -5,7 +5,7 @@
         public Guid Id { get; set; }
         public DateTime EntryDate { get; set; }
 
-        public int Code { get; set; }
+        public string Code { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
 
         public decimal? Chlorine { get; set; }

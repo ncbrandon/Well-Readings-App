@@ -41,6 +41,31 @@
         <button type="button" onclick="loadReport()">Run Report</button>
     </div>
 
+    <section class="card">
+        <h2>Import / Export Distribution Points</h2>
+
+        <h3>Export</h3>
+
+        <div class="entry-row">
+            <label>Beginning Date</label>
+            <input type="date" id="exportStartDate" />
+
+            <label>Ending Date</label>
+            <input type="date" id="exportEndDate" />
+
+            <button type="button" onclick="exportDistributionPoints()">Export Excel</button>
+        </div>
+
+        <h3>Import</h3>
+
+        <div class="entry-row">
+            <input type="file" id="importFile" accept=".xlsx" />
+            <button type="button" onclick="importDistributionPoints()">Import Excel</button>
+        </div>
+
+        <div id="importExportMessage" class="message"></div>
+    </section>
+
     <table class="report-table">
         <thead>
             <tr>
@@ -189,6 +214,7 @@
 
         await loadLocations();
         await loadReport();
+        setImportExportDates();
     }
 
     async function loadLocations() {
@@ -213,7 +239,7 @@
 
     async function saveEntry() {
         const entryDate = document.getElementById("entryDate").value;
-        const code = parseInt(document.getElementById("locationSelect").value);
+        const code = document.getElementById("locationSelect").value;
 
         const response = await fetch("/api/distribution-points/entry", {
             method: "POST",
@@ -322,7 +348,7 @@
             body: JSON.stringify({
                 id: document.getElementById("editId").value,
                 entryDate: document.getElementById("editDate").value,
-                code: parseInt(document.getElementById("editLocationSelect").value),
+                code: document.getElementById("editLocationSelect").value,
                 chlorine: getDecimalOrNull("editChlorine"),
                 phosphate: getDecimalOrNull("editPhosphate"),
                 ph: getDecimalOrNull("editPh")
@@ -413,6 +439,59 @@
         return Number(value).toLocaleString(undefined, {
             maximumFractionDigits: 3
         });
+    }
+
+        function setImportExportDates() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        document.getElementById("exportStartDate").valueAsDate = firstDay;
+        document.getElementById("exportEndDate").valueAsDate = today;
+    }
+
+    function exportDistributionPoints() {
+        const startDate = document.getElementById("exportStartDate").value;
+        const endDate = document.getElementById("exportEndDate").value;
+
+        if (!startDate || !endDate) {
+            alert("Please select beginning and ending dates.");
+            return;
+        }
+
+        window.location.href =
+            `/api/distribution-points/export?startDate=${startDate}&endDate=${endDate}`;
+    }
+
+    async function importDistributionPoints() {
+        const fileInput = document.getElementById("importFile");
+
+        if (!fileInput.files.length) {
+            alert("Please choose an Excel file.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        const response = await fetch("/api/distribution-points/import", {
+            method: "POST",
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+
+            setMessage(
+                "importExportMessage",
+                `Import complete. Imported: ${data.imported}, Updated: ${data.updated}, Skipped: ${data.skipped}`,
+                "#047857"
+            );
+
+            await loadReport();
+        } else {
+            const error = await response.text();
+            setMessage("importExportMessage", "Import failed. " + error, "#b91c1c");
+        }
     }
 
     initializePage();
