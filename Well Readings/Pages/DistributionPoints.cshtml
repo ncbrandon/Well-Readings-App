@@ -1,0 +1,419 @@
+﻿@page "/DistributionPoints"
+@model Well_Readings.Pages.DistributionPointsModel
+
+<h1>Distribution Points</h1>
+
+<section class="card">
+    <h2>New Entry</h2>
+
+    <div class="entry-row">
+        <label>Date</label>
+        <input type="date" id="entryDate" />
+
+        <label>Code / Location</label>
+        <select id="locationSelect"></select>
+
+        <label>Chlorine</label>
+        <input type="number" step="0.01" id="chlorine" />
+
+        <label>Phosphate</label>
+        <input type="number" step="0.01" id="phosphate" />
+
+        <label>pH</label>
+        <input type="number" step="0.01" id="ph" />
+
+        <button type="button" onclick="saveEntry()">Save Entry</button>
+    </div>
+
+    <div id="entryMessage" class="message"></div>
+</section>
+
+<section class="card">
+    <h2>Distribution Point Report</h2>
+
+    <div class="entry-row">
+        <label>Beginning Date</label>
+        <input type="date" id="startDate" />
+
+        <label>Ending Date</label>
+        <input type="date" id="endDate" />
+
+        <button type="button" onclick="loadReport()">Run Report</button>
+    </div>
+
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Code</th>
+                <th>Location</th>
+                <th>Chlorine</th>
+                <th>Phosphate</th>
+                <th>pH</th>
+                <th>Edit</th>
+            </tr>
+        </thead>
+        <tbody id="reportBody"></tbody>
+    </table>
+</section>
+
+<section class="card" id="editSection" style="display:none;">
+    <h2>Edit Distribution Point Entry</h2>
+
+    <input type="hidden" id="editId" />
+
+    <div class="entry-row">
+        <label>Date</label>
+        <input type="date" id="editDate" disabled />
+
+        <label>Code / Location</label>
+        <select id="editLocationSelect" disabled></select>
+
+        <label>Chlorine</label>
+        <input type="number" step="0.01" id="editChlorine" disabled />
+
+        <label>Phosphate</label>
+        <input type="number" step="0.01" id="editPhosphate" disabled />
+
+        <label>pH</label>
+        <input type="number" step="0.01" id="editPh" disabled />
+
+        <button type="button" id="enableEditBtn" onclick="enableEdit()">Edit Entry</button>
+        <button type="button" id="saveEditBtn" onclick="saveEdit()" disabled>Save Changes</button>
+        <button type="button" class="delete-btn" onclick="deleteEdit()">Delete</button>
+    </div>
+
+    <div id="editMessage" class="message"></div>
+</section>
+
+<style>
+    .card {
+        background: #f3f4f6;
+        color: #111827;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+    }
+
+        .card h2,
+        .card label {
+            color: #111827;
+        }
+
+    .entry-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+        .entry-row label {
+            font-weight: bold;
+        }
+
+    input,
+    select {
+        padding: 8px;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        color: #111827;
+        background: white;
+    }
+
+        input:disabled,
+        select:disabled {
+            background: #e5e7eb;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+
+    button {
+        padding: 10px 18px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+    .delete-btn {
+        background: #dc2626;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        color: #111827;
+        margin-top: 20px;
+    }
+
+        .report-table th,
+        .report-table td {
+            border: 1px solid #d1d5db;
+            padding: 9px;
+            text-align: left;
+        }
+
+        .report-table th {
+            background: #1f2937;
+            color: white;
+        }
+
+        .report-table tbody tr:nth-child(even) {
+            background: #eff6ff;
+        }
+
+    .message {
+        margin-top: 15px;
+        font-weight: bold;
+    }
+</style>
+
+<script>
+    let locations = [];
+
+    async function initializePage() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        document.getElementById("entryDate").valueAsDate = today;
+        document.getElementById("startDate").valueAsDate = firstDay;
+        document.getElementById("endDate").valueAsDate = today;
+
+        await loadLocations();
+        await loadReport();
+    }
+
+    async function loadLocations() {
+        const response = await fetch("/api/distribution-points/locations");
+        locations = await response.json();
+
+        populateLocationSelect("locationSelect");
+        populateLocationSelect("editLocationSelect");
+    }
+
+    function populateLocationSelect(id) {
+        const select = document.getElementById(id);
+        select.innerHTML = "";
+
+        locations.forEach(item => {
+            const option = document.createElement("option");
+            option.value = item.code;
+            option.textContent = `${item.code} - ${item.location}`;
+            select.appendChild(option);
+        });
+    }
+
+    async function saveEntry() {
+        const entryDate = document.getElementById("entryDate").value;
+        const code = parseInt(document.getElementById("locationSelect").value);
+
+        const response = await fetch("/api/distribution-points/entry", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                entryDate,
+                code,
+                chlorine: getDecimalOrNull("chlorine"),
+                phosphate: getDecimalOrNull("phosphate"),
+                ph: getDecimalOrNull("ph")
+            })
+        });
+
+        if (response.ok) {
+            setMessage("entryMessage", "Entry saved.", "#047857");
+            clearEntryFields();
+            await loadReport();
+        } else {
+            const error = await response.text();
+            setMessage("entryMessage", "Error saving entry. " + error, "#b91c1c");
+        }
+    }
+
+    async function loadReport() {
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+
+        const response = await fetch(`/api/distribution-points/report?startDate=${startDate}&endDate=${endDate}`);
+        const body = document.getElementById("reportBody");
+        body.innerHTML = "";
+
+        if (!response.ok) {
+            body.innerHTML = `<tr><td colspan="7">Error loading report.</td></tr>`;
+            return;
+        }
+
+        const rows = await response.json();
+
+        if (!rows || rows.length === 0) {
+            body.innerHTML = `<tr><td colspan="7">No entries found.</td></tr>`;
+            return;
+        }
+
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${formatDate(row.entryDate)}</td>
+                <td>${row.code}</td>
+                <td>${row.location}</td>
+                <td>${formatValue(row.chlorine)}</td>
+                <td>${formatValue(row.phosphate)}</td>
+                <td>${formatValue(row.ph)}</td>
+                <td><button type="button" onclick="loadEdit('${row.id}')">Edit</button></td>
+            `;
+
+            body.appendChild(tr);
+        });
+    }
+
+    async function loadEdit(id) {
+        const response = await fetch(`/api/distribution-points/entry/${id}`);
+
+        if (!response.ok) {
+            alert("Unable to load entry.");
+            return;
+        }
+
+        const entry = await response.json();
+
+        document.getElementById("editSection").style.display = "block";
+        document.getElementById("editId").value = entry.id;
+        document.getElementById("editDate").value = normalizeDate(entry.entryDate);
+        document.getElementById("editLocationSelect").value = entry.code;
+        document.getElementById("editChlorine").value = entry.chlorine ?? "";
+        document.getElementById("editPhosphate").value = entry.phosphate ?? "";
+        document.getElementById("editPh").value = entry.ph ?? "";
+
+        setEditDisabled(true);
+
+        document.getElementById("enableEditBtn").disabled = false;
+        document.getElementById("saveEditBtn").disabled = true;
+
+        window.scrollTo({ top: document.getElementById("editSection").offsetTop - 20, behavior: "smooth" });
+    }
+
+    function enableEdit() {
+        if (!confirm("Enable editing for this distribution point entry?")) {
+            return;
+        }
+
+        setEditDisabled(false);
+        document.getElementById("enableEditBtn").disabled = true;
+        document.getElementById("saveEditBtn").disabled = false;
+        setMessage("editMessage", "Editing enabled. Make changes, then click Save Changes.", "#92400e");
+    }
+
+    async function saveEdit() {
+        const response = await fetch("/api/distribution-points/update", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                id: document.getElementById("editId").value,
+                entryDate: document.getElementById("editDate").value,
+                code: parseInt(document.getElementById("editLocationSelect").value),
+                chlorine: getDecimalOrNull("editChlorine"),
+                phosphate: getDecimalOrNull("editPhosphate"),
+                ph: getDecimalOrNull("editPh")
+            })
+        });
+
+        if (response.ok) {
+            setMessage("editMessage", "Entry updated.", "#047857");
+            setEditDisabled(true);
+            document.getElementById("enableEditBtn").disabled = false;
+            document.getElementById("saveEditBtn").disabled = true;
+            await loadReport();
+        } else {
+            const error = await response.text();
+            setMessage("editMessage", "Error updating entry. " + error, "#b91c1c");
+        }
+    }
+
+    async function deleteEdit() {
+        const id = document.getElementById("editId").value;
+
+        if (!id) return;
+
+        if (!confirm("Delete this distribution point entry?")) {
+            return;
+        }
+
+        const response = await fetch(`/api/distribution-points/delete/${id}`, {
+            method: "POST"
+        });
+
+        if (response.ok) {
+            document.getElementById("editSection").style.display = "none";
+            await loadReport();
+        } else {
+            setMessage("editMessage", "Error deleting entry.", "#b91c1c");
+        }
+    }
+
+    function setEditDisabled(disabled) {
+        document.getElementById("editDate").disabled = disabled;
+        document.getElementById("editLocationSelect").disabled = disabled;
+        document.getElementById("editChlorine").disabled = disabled;
+        document.getElementById("editPhosphate").disabled = disabled;
+        document.getElementById("editPh").disabled = disabled;
+    }
+
+    function clearEntryFields() {
+        document.getElementById("chlorine").value = "";
+        document.getElementById("phosphate").value = "";
+        document.getElementById("ph").value = "";
+    }
+
+    function getDecimalOrNull(id) {
+        const value = document.getElementById(id).value;
+        return value === "" ? null : parseFloat(value);
+    }
+
+    function setMessage(id, text, color) {
+        const el = document.getElementById(id);
+        el.innerText = text;
+        el.style.color = color;
+    }
+
+    function normalizeDate(value) {
+        const date = new Date(value);
+
+        return date.getFullYear() + "-" +
+            String(date.getMonth() + 1).padStart(2, "0") + "-" +
+            String(date.getDate()).padStart(2, "0");
+    }
+
+    function formatDate(value) {
+        if (!value) return "";
+
+        const date = new Date(value);
+
+        return date.toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        });
+    }
+
+    function formatValue(value) {
+        if (value === null || value === undefined) return "";
+
+        return Number(value).toLocaleString(undefined, {
+            maximumFractionDigits: 3
+        });
+    }
+
+    initializePage();
+</script>

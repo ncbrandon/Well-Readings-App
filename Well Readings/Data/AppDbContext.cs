@@ -21,6 +21,7 @@ namespace Well_Readings.Data
         public DbSet<WellAlarm> WellAlarms => Set<WellAlarm>();
         public DbSet<MaintenanceSiteStatus> MaintenanceSiteStatuses { get; set; }
         public DbSet<ValidMeterLocation> ValidMeterLocations { get; set; }
+        public DbSet<DistributionPointEntry> DistributionPointEntries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
