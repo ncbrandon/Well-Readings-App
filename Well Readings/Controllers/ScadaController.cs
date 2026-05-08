@@ -408,6 +408,8 @@ namespace Well_Readings.Controllers
                     continue;
 
                 var config = reportSites[selectedSite];
+                var meterSummaries = new List<object>();
+                var siteDailyTotals = new Dictionary<DateTime, decimal>();
 
                 foreach (var meter in config.Meters)
                 {
@@ -435,7 +437,12 @@ namespace Well_Readings.Controllers
                         if (gallons < 0)
                             gallons = 0;
 
-                        dailyRows.Add((current.Timestamp, gallons));
+                        dailyRows.Add((current.Timestamp.Date, gallons));
+
+                        if (!siteDailyTotals.ContainsKey(current.Timestamp.Date))
+                            siteDailyTotals[current.Timestamp.Date] = 0;
+
+                        siteDailyTotals[current.Timestamp.Date] += gallons;
 
                         rows.Add(new
                         {
@@ -450,34 +457,9 @@ namespace Well_Readings.Controllers
                                 ? GetDailyValue(points, config.ChemistryLocations, "Temperature", current.Timestamp.Date)
                                 : null
                         });
-
-                        if (selectedSite == "Reeves Well Site" || selectedSite == "Park Well Site")
-                        {
-                            var siteDailyTotals = rows
-                                .Where(x =>
-                                    x.GetType().GetProperty("site")!.GetValue(x)!.ToString() == selectedSite)
-                                .GroupBy(x =>
-                                    ((DateTime)x.GetType().GetProperty("date")!.GetValue(x)!).Date)
-                                .Select(g => new
-                                {
-                                    Date = g.Key,
-                                    Gallons = g.Sum(x =>
-                                        (decimal)x.GetType().GetProperty("gallonsPumped")!.GetValue(x)!)
-                                })
-                                .ToList();
-
-                            summaryRows.Add(new
-                            {
-                                site = selectedSite,
-                                name = selectedSite + " Total",
-                                daysPumped = siteDailyTotals.Count(x => x.Gallons > 0),
-                                maxGallonsPumped = siteDailyTotals.Any() ? siteDailyTotals.Max(x => x.Gallons) : 0,
-                                totalGallonsPumped = siteDailyTotals.Sum(x => x.Gallons)
-                            });
-                        }
                     }
 
-                    summaryRows.Add(new
+                    meterSummaries.Add(new
                     {
                         site = selectedSite,
                         name = meter.DisplayName,
@@ -486,6 +468,20 @@ namespace Well_Readings.Controllers
                         totalGallonsPumped = dailyRows.Sum(x => x.Gallons)
                     });
                 }
+
+                if (selectedSite == "Reeves Well Site" || selectedSite == "Park Well Site")
+                {
+                    summaryRows.Add(new
+                    {
+                        site = selectedSite,
+                        name = selectedSite,
+                        daysPumped = siteDailyTotals.Count(x => x.Value > 0),
+                        maxGallonsPumped = siteDailyTotals.Any() ? siteDailyTotals.Max(x => x.Value) : 0,
+                        totalGallonsPumped = siteDailyTotals.Sum(x => x.Value)
+                    });
+                }
+
+                summaryRows.AddRange(meterSummaries);
             }
 
             return Ok(new
