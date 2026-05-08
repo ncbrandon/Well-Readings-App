@@ -602,17 +602,22 @@
                 usedRows.add(row.id);
 
                 const codeInput = getInputByEndsWith(row, "_txtLocationCode");
+                const addressInput = getInputByEndsWith(row, "_txtSampleAddress");
                 const chlorineInput = getChlorineInput(row);
 
                 console.log("Filling distribution row", row.id, item);
 
-                await setNcValue(codeInput, item.code, row.id + " Location Code");
+                    await setNcValue(codeInput, item.code, row.id + " Location Code");
 
-                await sleep(1200);
+                    await sleep(1200);
 
-                await setNcValue(chlorineInput, item.chlorine, row.id + " Chlorine");
+                    await setNcValue(addressInput, item.location, row.id + " Sample Address");
 
-                await sleep(1200);
+                    await sleep(1200);
+
+                    await setNcValue(chlorineInput, item.chlorine, row.id + " Chlorine");
+
+                    await sleep(1200);
             }
 
             console.log("Distribution NC MOR autofill complete. Wait at least 10 seconds, then refresh the NC page to confirm saved values.");
