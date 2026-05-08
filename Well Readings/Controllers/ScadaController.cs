@@ -655,7 +655,6 @@ namespace Well_Readings.Controllers
         [HttpGet("nc-mor-report")]
         public async Task<IActionResult> GetNcMorReport(string site, DateTime startDate, DateTime endDate)
         {
-
             if (site == "Distribution Points")
             {
                 var distributionRows = await _context.DistributionPointEntries
@@ -680,54 +679,14 @@ namespace Well_Readings.Controllers
 
             var siteConfig = site switch
             {
-                "Reeves Well Site" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "Reeves Well", "Reeves Well A" },
-                    ChemistryLocation = "Reeves Well Site"
-                },
-                "Park Well Site" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "Park Well", "Park Well A", "Park Well B" },
-                    ChemistryLocation = "Park Well Site"
-                },
-                "Woods" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "Woods" },
-                    ChemistryLocation = "Woods"
-                },
-                "Catawissa" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "Catawissa" },
-                    ChemistryLocation = "Catawissa"
-                },
-                "New" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "New" },
-                    ChemistryLocation = "New"
-                },
-                "Oakwood" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "Oakwood" },
-                    ChemistryLocation = "Oakwood"
-                },
-                "Ray" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "Ray" },
-                    ChemistryLocation = "Ray"
-                },
-                "Filter Plant" => new
-                {
-                    SiteName = site,
-                    Meters = new[] { "Filter Plant" },
-                    ChemistryLocation = "Filter Plant"
-                },
+                "Reeves Well Site" => new { Meters = new[] { "Reeves Well", "Reeves Well A" }, ChemistryLocation = "Reeves Well Site" },
+                "Park Well Site" => new { Meters = new[] { "Park Well", "Park Well A", "Park Well B" }, ChemistryLocation = "Park Well Site" },
+                "Woods" => new { Meters = new[] { "Woods" }, ChemistryLocation = "Woods" },
+                "Catawissa" => new { Meters = new[] { "Catawissa" }, ChemistryLocation = "Catawissa" },
+                "New" => new { Meters = new[] { "New" }, ChemistryLocation = "New" },
+                "Oakwood" => new { Meters = new[] { "Oakwood" }, ChemistryLocation = "Oakwood" },
+                "Ray" => new { Meters = new[] { "Ray" }, ChemistryLocation = "Ray" },
+                "Filter Plant" => new { Meters = new[] { "Filter Plant" }, ChemistryLocation = "Filter Plant" },
                 _ => null
             };
 
@@ -760,6 +719,7 @@ namespace Well_Readings.Controllers
                     if (current?.Value != null && previous?.Value != null)
                     {
                         var delta = current.Value.Value - previous.Value.Value;
+
                         if (delta > 0)
                             gallons += delta;
 
@@ -767,6 +727,9 @@ namespace Well_Readings.Controllers
                             latestTime = current.Timestamp;
                     }
                 }
+
+                if (gallons <= 0)
+                    continue;
 
                 var chlorine = await _context.ScadaHistoryPoints
                     .Where(x => x.Location == siteConfig.ChemistryLocation &&
@@ -784,17 +747,14 @@ namespace Well_Readings.Controllers
                     .Select(x => x.Value)
                     .FirstOrDefaultAsync();
 
-                if (gallons > 0)
+                rows.Add(new
                 {
-                    rows.Add(new
-                    {
-                        date = date.ToString("MM/dd/yyyy"),
-                        time = latestTime?.ToString("HH:mm") ?? "",
-                        gallons,
-                        chlorine,
-                        phosphate
-                    });
-                }
+                    date = date.ToString("yyyy-MM-dd"),
+                    time = latestTime?.ToString("HH:mm") ?? "",
+                    gallons,
+                    chlorine,
+                    phosphate
+                });
             }
 
             return Ok(rows);

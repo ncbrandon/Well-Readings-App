@@ -499,7 +499,7 @@
 
             const data = await response.json();
 
-            const script =
+                const script =
     `function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
@@ -553,57 +553,55 @@
         for (let index = 0; index < data.length; index++) {
             const row = data[index];
 
-            const rowDate = new Date(row.date);
-            const rowIndex = (rowDate.getDate() + 1).toString().padStart(2, "0");;
+            const rowDate = new Date(row.date + "T00:00:00");
+            const rowIndex = (rowDate.getDate() + 1).toString().padStart(2, "0");
 
-            console.log("Filling row", index + 1, row);
+            console.log("Filling row", rowIndex, row);
 
-                if (row.code) {
-        await setNcValue(
-            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtCode`),
-            row.code,
-            `Row ${rowIndex} Code`
-        );
+            if (row.code) {
+                await setNcValue(
+                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtCode\`),
+                    row.code,
+                    \`Row \${rowIndex} Code\`
+                );
 
-        await setNcValue(
-            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtLocation`),
-            row.location,
-            `Row ${rowIndex} Location`
-        );
+                await setNcValue(
+                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtLocation\`),
+                    row.location,
+                    \`Row \${rowIndex} Location\`
+                );
 
-        await setNcValue(
-            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtTotalChlorine`),
-            row.chlorine,
-            `Row ${rowIndex} Chlorine`
-        );
-    } else {
-        await setNcValue(
-            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtTime`),
-            row.time,
-            `Row ${rowIndex} Time`
-        );
+                await setNcValue(
+                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
+                    row.chlorine,
+                    \`Row \${rowIndex} Chlorine\`
+                );
+            } else {
+                await setNcValue(
+                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`),
+                    row.time,
+                    \`Row \${rowIndex} Time\`
+                );
 
-        await setNcValue(
-            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtSourcePumped`),
-            Math.round(row.gallons),
-            `Row ${rowIndex} Source Pumped`
-        );
+                await setNcValue(
+                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`),
+                    Math.round(row.gallons),
+                    \`Row \${rowIndex} Source Pumped\`
+                );
 
-        await setNcValue(
-            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtTotalChlorine`),
-            row.chlorine,
-            `Row ${rowIndex} Chlorine`
-        );
+                await setNcValue(
+                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
+                    row.chlorine,
+                    \`Row \${rowIndex} Chlorine\`
+                );
 
-        await setNcValue(
-            document.getElementById(`ctl00_head_grdMonthlyData_ctl${rowIndex}_txtMonochloramine`),
-            row.phosphate,
-            `Row ${rowIndex} Phosphate`
-        );
-    }
+                await setNcValue(
+                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`),
+                    row.phosphate,
+                    \`Row \${rowIndex} Phosphate\`
+                );
+            }
 
-            
-            console.log("Finished row", index + 1);
             await sleep(1200);
         }
 
