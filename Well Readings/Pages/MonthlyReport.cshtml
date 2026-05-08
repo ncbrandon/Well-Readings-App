@@ -499,7 +499,7 @@
 
             const data = await response.json();
 
-                const script =
+                    const script =
     `function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
@@ -544,11 +544,80 @@
         await sleep(700);
     }
 
+    function normalizeDateText(value) {
+        if (!value) return "";
+
+        const d = new Date(value + "T00:00:00");
+
+        return String(d.getMonth() + 1).padStart(2, "0") + "/" +
+            String(d.getDate()).padStart(2, "0") + "/" +
+            d.getFullYear();
+    }
+
+    function getDistributionRows() {
+        return Array.from(document.querySelectorAll("tr[id^='ctl00_head_grdMonthly_ctl']"));
+    }
+
+    function findDistributionRowsByDate(dateText) {
+        return getDistributionRows().filter(row => row.innerText.includes(dateText));
+    }
+
+    function getInputByEndsWith(row, suffix) {
+        return Array.from(row.querySelectorAll("input"))
+            .find(input => input.id.endsWith(suffix));
+    }
+
+    function getChlorineInput(row) {
+        return Array.from(row.querySelectorAll("input")).find(input =>
+            input.id.toLowerCase().includes("chlorine") ||
+            input.id.toLowerCase().includes("freechlorine") ||
+            input.id.toLowerCase().includes("txtcl")
+        );
+    }
+
     const data = ${JSON.stringify(data, null, 4)};
 
     (async function () {
         console.log("Waiting for NC MOR page to finish loading...");
         await sleep(2500);
+
+        const isDistribution = data.length > 0 && data[0].code;
+
+        if (isDistribution) {
+            const usedRows = new Set();
+
+            for (let index = 0; index < data.length; index++) {
+                const item = data[index];
+                const dateText = normalizeDateText(item.date);
+
+                const matchingRows = findDistributionRowsByDate(dateText)
+                    .filter(row => !usedRows.has(row.id));
+
+                if (matchingRows.length === 0) {
+                    console.warn("No unused distribution row found for date:", dateText, item);
+                    continue;
+                }
+
+                const row = matchingRows[0];
+                usedRows.add(row.id);
+
+                const codeInput = getInputByEndsWith(row, "_txtLocationCode");
+                const chlorineInput = getChlorineInput(row);
+
+                console.log("Filling distribution row", row.id, item);
+
+                await setNcValue(codeInput, item.code, row.id + " Location Code");
+
+                await sleep(1200);
+
+                await setNcValue(chlorineInput, item.chlorine, row.id + " Chlorine");
+
+                await sleep(1200);
+            }
+
+            console.log("Distribution NC MOR autofill complete. Wait at least 10 seconds, then refresh the NC page to confirm saved values.");
+            return;
+        }
 
         for (let index = 0; index < data.length; index++) {
             const row = data[index];
@@ -556,56 +625,36 @@
             const rowDate = new Date(row.date + "T00:00:00");
             const rowIndex = (rowDate.getDate() + 1).toString().padStart(2, "0");
 
-            console.log("Filling row", rowIndex, row);
+            console.log("Filling source water row", rowIndex, row);
 
-            if (row.code) {
-                await setNcValue(
-                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtCode\`),
-                    row.code,
-                    \`Row \${rowIndex} Code\`
-                );
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`),
+                row.time,
+                \`Row \${rowIndex} Time\`
+            );
 
-                await setNcValue(
-                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtLocation\`),
-                    row.location,
-                    \`Row \${rowIndex} Location\`
-                );
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`),
+                Math.round(row.gallons),
+                \`Row \${rowIndex} Source Pumped\`
+            );
 
-                await setNcValue(
-                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
-                    row.chlorine,
-                    \`Row \${rowIndex} Chlorine\`
-                );
-            } else {
-                await setNcValue(
-                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTime\`),
-                    row.time,
-                    \`Row \${rowIndex} Time\`
-                );
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
+                row.chlorine,
+                \`Row \${rowIndex} Chlorine\`
+            );
 
-                await setNcValue(
-                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtSourcePumped\`),
-                    Math.round(row.gallons),
-                    \`Row \${rowIndex} Source Pumped\`
-                );
-
-                await setNcValue(
-                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtTotalChlorine\`),
-                    row.chlorine,
-                    \`Row \${rowIndex} Chlorine\`
-                );
-
-                await setNcValue(
-                    document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`),
-                    row.phosphate,
-                    \`Row \${rowIndex} Phosphate\`
-                );
-            }
+            await setNcValue(
+                document.getElementById(\`ctl00_head_grdMonthlyData_ctl\${rowIndex}_txtMonochloramine\`),
+                row.phosphate,
+                \`Row \${rowIndex} Phosphate\`
+            );
 
             await sleep(1200);
         }
 
-        console.log("NC MOR autofill complete. Wait at least 10 seconds, then refresh the NC page to confirm saved values.");
+        console.log("Source Water NC MOR autofill complete. Wait at least 10 seconds, then refresh the NC page to confirm saved values.");
     })();`;
 
             document.getElementById("ncMorScript").value = script;
