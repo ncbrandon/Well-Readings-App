@@ -18,7 +18,7 @@ namespace Well_Readings.Controllers
 
         private static readonly List<DistributionPointLocation> Locations = new()
         {
-            new DistributionPointLocation { Code = "001", Location = "S. Jefferson Avenue" },
+            new DistributionPointLocation { Code = "001", Location = "1 S. Jefferson Avenue" },
             new DistributionPointLocation { Code = "002", Location = "406 School Avenue" },
             new DistributionPointLocation { Code = "006", Location = "485 Beaver Creek School Road" },
             new DistributionPointLocation { Code = "007", Location = "4083 US Hwy 221 South" },
