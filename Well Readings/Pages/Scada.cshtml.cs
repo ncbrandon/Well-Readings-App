@@ -49,8 +49,11 @@ namespace Well_Readings.Pages
         private async Task<List<PumpedHistoryRowDto>> GetPrevious30DaysPumpedAsync()
         {
             var today = DateTime.Today;
+
+            // This gives the previous 30 complete days PLUS today.
+            // That lets the warning compare today against the prior 30-day average.
             var startDate = today.AddDays(-30);
-            var endDate = today.AddDays(-1);
+            var endDate = today;
 
             var results = new List<PumpedHistoryRowDto>();
 
@@ -63,7 +66,8 @@ namespace Well_Readings.Pages
                     Date = date,
                     DayName = date.ToString("dddd", CultureInfo.InvariantCulture),
                     DisplayDate = date.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture),
-                    GallonsPumped = gallons
+                    GallonsPumped = gallons,
+                    IsToday = date.Date == today.Date
                 });
             }
 
@@ -92,7 +96,7 @@ namespace Well_Readings.Pages
             var firstYear = earliestScadaDate.Value.Year;
             var results = new List<PumpedHistoryRowDto>();
 
-            for (var year = firstYear; year < currentYear; year++)
+            for (var year = firstYear; year <= currentYear; year++)
             {
                 DateTime date;
 
@@ -106,8 +110,11 @@ namespace Well_Readings.Pages
                 }
 
                 var gallons = await GetTotalGallonsPumpedForDateAsync(date);
+                var isToday = date.Date == today.Date;
 
-                if (gallons <= 0)
+                // Keep today even if the value is 0, because it helps show whether today's data exists yet.
+                // For prior years, skip dates with no pumped data.
+                if (!isToday && gallons <= 0)
                 {
                     continue;
                 }
@@ -117,7 +124,8 @@ namespace Well_Readings.Pages
                     Date = date,
                     DayName = date.ToString("dddd", CultureInfo.InvariantCulture),
                     DisplayDate = date.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture),
-                    GallonsPumped = gallons
+                    GallonsPumped = gallons,
+                    IsToday = isToday
                 });
             }
 
@@ -179,6 +187,8 @@ namespace Well_Readings.Pages
             public DateTime Date { get; set; }
 
             public decimal GallonsPumped { get; set; }
+
+            public bool IsToday { get; set; }
         }
     }
 }

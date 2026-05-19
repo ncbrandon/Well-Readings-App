@@ -47,6 +47,10 @@
         Select an option to load pumped history.
     </div>
 
+    <div id="pumpedHistoryWarning" class="history-warning history-warning-neutral">
+        Load pumped history to compare today's pumping against normal usage.
+    </div>
+
     <div class="history-summary-row">
         <div class="history-summary-card">
             <div class="history-summary-label">Records</div>
@@ -54,18 +58,18 @@
         </div>
 
         <div class="history-summary-card">
-            <div class="history-summary-label">Average</div>
+            <div class="history-summary-label" id="historyAverageLabel">Comparison Avg.</div>
             <div class="history-summary-value" id="historyAverage">-</div>
         </div>
 
         <div class="history-summary-card">
-            <div class="history-summary-label">Highest</div>
-            <div class="history-summary-value" id="historyHighest">-</div>
+            <div class="history-summary-label">Today</div>
+            <div class="history-summary-value" id="historyToday">-</div>
         </div>
 
         <div class="history-summary-card">
-            <div class="history-summary-label">Lowest</div>
-            <div class="history-summary-value" id="historyLowest">-</div>
+            <div class="history-summary-label">Difference</div>
+            <div class="history-summary-value" id="historyDifference">-</div>
         </div>
     </div>
 
@@ -131,9 +135,9 @@
         margin-bottom: 1rem;
         padding: 1.25rem;
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.96);
-        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
-        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: #ffffff;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+        border: 1px solid #d8dee9;
     }
 
     .pumped-history-header {
@@ -148,11 +152,13 @@
             margin: 0;
             font-size: 1.35rem;
             font-weight: 800;
+            color: #111827;
         }
 
         .pumped-history-header p {
             margin: 0.25rem 0 0;
-            color: #555;
+            color: #374151;
+            font-weight: 500;
         }
 
     .close-history-btn {
@@ -161,7 +167,8 @@
         font-size: 2rem;
         line-height: 1;
         cursor: pointer;
-        color: #333;
+        color: #111827;
+        font-weight: 700;
     }
 
     .history-button-row {
@@ -172,8 +179,9 @@
     }
 
     .history-mode-btn {
-        border: 1px solid #ccc;
-        background: #f7f7f7;
+        border: 1px solid #b8c2cf;
+        background: #f8fafc;
+        color: #111827;
         padding: 0.6rem 1rem;
         border-radius: 999px;
         cursor: pointer;
@@ -181,15 +189,48 @@
     }
 
         .history-mode-btn.active {
-            background: #1f6feb;
+            background: #2563eb;
             color: white;
-            border-color: #1f6feb;
+            border-color: #2563eb;
         }
 
     .history-status {
-        margin-bottom: 1rem;
-        color: #555;
+        margin-bottom: 0.75rem;
+        color: #374151;
         font-weight: 700;
+    }
+
+    .history-warning {
+        margin-bottom: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+        font-weight: 800;
+        line-height: 1.35;
+        border: 1px solid transparent;
+    }
+
+    .history-warning-neutral {
+        background: #f3f4f6;
+        color: #1f2937;
+        border-color: #d1d5db;
+    }
+
+    .history-warning-good {
+        background: #ecfdf5;
+        color: #065f46;
+        border-color: #a7f3d0;
+    }
+
+    .history-warning-watch {
+        background: #fffbeb;
+        color: #92400e;
+        border-color: #fcd34d;
+    }
+
+    .history-warning-alert {
+        background: #fef2f2;
+        color: #991b1b;
+        border-color: #fca5a5;
     }
 
     .history-summary-row {
@@ -200,33 +241,34 @@
     }
 
     .history-summary-card {
-        background: #f7f9fc;
-        border: 1px solid #e1e6ef;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
         border-radius: 14px;
         padding: 0.85rem;
     }
 
     .history-summary-label {
-        color: #555;
+        color: #374151;
         font-size: 0.85rem;
-        font-weight: 700;
+        font-weight: 800;
         margin-bottom: 0.25rem;
     }
 
     .history-summary-value {
         font-size: 1.25rem;
-        font-weight: 800;
+        font-weight: 900;
+        color: #111827;
     }
 
     .history-chart-wrap {
-        height: 320px;
+        height: 340px;
         margin-bottom: 1.25rem;
     }
 
     .history-table-wrap {
         max-height: 420px;
         overflow: auto;
-        border: 1px solid #e1e1e1;
+        border: 1px solid #d1d5db;
         border-radius: 12px;
         background: white;
     }
@@ -240,15 +282,22 @@
         .history-table th,
         .history-table td {
             padding: 0.65rem 0.75rem;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #e5e7eb;
             text-align: left;
         }
 
         .history-table th {
-            background: #f5f7fa;
+            background: #f3f4f6;
             position: sticky;
             top: 0;
             z-index: 1;
+            color: #374151;
+            font-weight: 900;
+        }
+
+        .history-table td {
+            color: #111827;
+            font-weight: 600;
         }
 
             .history-table td:last-child,
@@ -256,9 +305,19 @@
                 text-align: right;
             }
 
+    .today-row {
+        background: #eff6ff;
+        font-weight: 900;
+    }
+
     .high-pumped-row {
-        background: #fff4f4;
-        font-weight: 700;
+        background: #fff7ed;
+        font-weight: 900;
+    }
+
+    .very-high-pumped-row {
+        background: #fef2f2;
+        font-weight: 900;
     }
 
     @@media (max-width: 900px) {
@@ -370,7 +429,8 @@
         status.textContent = "Loading pumped history...";
         tableBody.innerHTML = "";
 
-        updateHistorySummary([]);
+        updateHistorySummary([], mode);
+        updateHistoryWarning([], mode);
 
         try {
             const response = await fetch(`/Scada?handler=PumpedHistory&mode=${encodeURIComponent(mode)}`);
@@ -383,59 +443,189 @@
 
             if (!data || data.length === 0) {
                 status.textContent = "No pumped history found.";
-                renderPumpedHistoryChart([]);
+                renderPumpedHistoryChart([], mode);
+                updateHistoryWarning([], mode);
                 return;
             }
 
             if (mode === "30days") {
-                status.textContent = "Showing pumped water totals for the previous 30 days.";
+                status.textContent = "Showing the previous 30 days plus today.";
             } else {
-                status.textContent = "Showing pumped water totals for this same calendar date in previous years.";
+                status.textContent = "Showing this same calendar date in previous years plus today.";
             }
 
-            const values = data.map(x => Number(x.gallonsPumped || 0));
-            const average = values.reduce((a, b) => a + b, 0) / values.length;
+            const comparison = getComparisonStats(data);
 
             for (const row of data) {
                 const gallons = Number(row.gallonsPumped || 0);
                 const tr = document.createElement("tr");
 
-                if (average > 0 && gallons > average * 1.25) {
+                if (row.isToday) {
+                    tr.classList.add("today-row");
+                } else if (comparison.average > 0 && gallons >= comparison.average * 1.25) {
+                    tr.classList.add("very-high-pumped-row");
+                } else if (comparison.average > 0 && gallons >= comparison.average * 1.10) {
                     tr.classList.add("high-pumped-row");
                 }
 
                 tr.innerHTML = `
                     <td>${row.dayName ?? ""}</td>
-                    <td>${row.displayDate ?? ""}</td>
+                    <td>${row.displayDate ?? ""}${row.isToday ? " <strong>(Today)</strong>" : ""}</td>
                     <td>${formatGallons(gallons)}</td>
                 `;
 
                 tableBody.appendChild(tr);
             }
 
-            updateHistorySummary(data);
-            renderPumpedHistoryChart(data);
+            updateHistorySummary(data, mode);
+            updateHistoryWarning(data, mode);
+            renderPumpedHistoryChart(data, mode);
         } catch (error) {
             console.error(error);
             status.textContent = "Could not load pumped history.";
-            renderPumpedHistoryChart([]);
+            renderPumpedHistoryChart([], mode);
+            updateHistoryWarning([], mode);
         }
     }
 
-    function renderPumpedHistoryChart(data) {
+    function getComparisonStats(data) {
+        if (!data || data.length === 0) {
+            return {
+                todayRow: null,
+                comparisonRows: [],
+                average: 0,
+                todayValue: 0,
+                difference: 0,
+                percentDifference: 0
+            };
+        }
+
+        const todayRow = data.find(x => x.isToday) ?? data[data.length - 1];
+
+        const comparisonRows = data.filter(x => x !== todayRow && !x.isToday);
+        const comparisonValues = comparisonRows.map(x => Number(x.gallonsPumped || 0));
+
+        const average = comparisonValues.length > 0
+            ? comparisonValues.reduce((a, b) => a + b, 0) / comparisonValues.length
+            : 0;
+
+        const todayValue = Number(todayRow?.gallonsPumped || 0);
+        const difference = todayValue - average;
+
+        const percentDifference = average > 0
+            ? (difference / average) * 100
+            : 0;
+
+        return {
+            todayRow,
+            comparisonRows,
+            average,
+            todayValue,
+            difference,
+            percentDifference
+        };
+    }
+
+    function updateHistoryWarning(data, mode) {
+        const warning = document.getElementById("pumpedHistoryWarning");
+
+        warning.className = "history-warning history-warning-neutral";
+
+        if (!data || data.length === 0) {
+            warning.textContent = "Load pumped history to compare today's pumping against normal usage.";
+            return;
+        }
+
+        const stats = getComparisonStats(data);
+
+        if (!stats.todayRow) {
+            warning.textContent = "Today's pumped total was not found in this dataset.";
+            return;
+        }
+
+        if (stats.average <= 0) {
+            warning.textContent = "Not enough comparison data to determine whether today is unusually high.";
+            return;
+        }
+
+        const percent = Math.round(stats.percentDifference);
+        const todayText = formatGallons(stats.todayValue);
+        const avgText = formatGallons(stats.average);
+
+        const comparisonText = mode === "yearsToday"
+            ? "same-date previous-years average"
+            : "previous 30-day average";
+
+        if (percent >= 25) {
+            warning.className = "history-warning history-warning-alert";
+            warning.textContent = `Warning: Today is ${percent}% higher than the ${comparisonText}. Today: ${todayText} gallons. Average: ${avgText} gallons. This could signal unusually high usage or a possible leak.`;
+        } else if (percent >= 10) {
+            warning.className = "history-warning history-warning-watch";
+            warning.textContent = `Watch: Today is ${percent}% higher than the ${comparisonText}. Today: ${todayText} gallons. Average: ${avgText} gallons.`;
+        } else if (percent <= -10) {
+            warning.className = "history-warning history-warning-good";
+            warning.textContent = `Today is ${Math.abs(percent)}% lower than the ${comparisonText}. Today: ${todayText} gallons. Average: ${avgText} gallons.`;
+        } else {
+            warning.className = "history-warning history-warning-good";
+            warning.textContent = `Today is close to normal compared with the ${comparisonText}. Today: ${todayText} gallons. Average: ${avgText} gallons.`;
+        }
+    }
+
+    function renderPumpedHistoryChart(data, mode) {
         const ctx = document.getElementById("pumpedHistoryChart");
 
         if (pumpedHistoryChart) {
             pumpedHistoryChart.destroy();
         }
 
+        const stats = getComparisonStats(data);
+
+        const backgroundColors = data.map(row => {
+            const gallons = Number(row.gallonsPumped || 0);
+
+            if (row.isToday) {
+                return "#2563eb";
+            }
+
+            if (stats.average > 0 && gallons >= stats.average * 1.25) {
+                return "#ef4444";
+            }
+
+            if (stats.average > 0 && gallons >= stats.average * 1.10) {
+                return "#f59e0b";
+            }
+
+            return "#76acd2";
+        });
+
+        const borderColors = data.map(row => {
+            const gallons = Number(row.gallonsPumped || 0);
+
+            if (row.isToday) {
+                return "#1d4ed8";
+            }
+
+            if (stats.average > 0 && gallons >= stats.average * 1.25) {
+                return "#b91c1c";
+            }
+
+            if (stats.average > 0 && gallons >= stats.average * 1.10) {
+                return "#b45309";
+            }
+
+            return "#5a94bd";
+        });
+
         pumpedHistoryChart = new Chart(ctx, {
             type: "bar",
             data: {
-                labels: data.map(x => x.displayDate),
+                labels: data.map(x => x.isToday ? `${x.displayDate} Today` : x.displayDate),
                 datasets: [{
                     label: "Gallons Pumped",
-                    data: data.map(x => x.gallonsPumped)
+                    data: data.map(x => x.gallonsPumped),
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -454,12 +644,26 @@
                     }
                 },
                 scales: {
+                    x: {
+                        ticks: {
+                            color: "#374151",
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: {
+                            color: "rgba(0,0,0,0.08)"
+                        }
+                    },
                     y: {
                         beginAtZero: true,
                         ticks: {
+                            color: "#374151",
                             callback: function (value) {
                                 return Number(value).toLocaleString();
                             }
+                        },
+                        grid: {
+                            color: "rgba(0,0,0,0.08)"
                         }
                     }
                 }
@@ -467,30 +671,37 @@
         });
     }
 
-    function updateHistorySummary(data) {
+    function updateHistorySummary(data, mode) {
         const recordCount = document.getElementById("historyRecordCount");
+        const averageLabel = document.getElementById("historyAverageLabel");
         const average = document.getElementById("historyAverage");
-        const highest = document.getElementById("historyHighest");
-        const lowest = document.getElementById("historyLowest");
+        const today = document.getElementById("historyToday");
+        const difference = document.getElementById("historyDifference");
+
+        if (mode === "yearsToday") {
+            averageLabel.textContent = "Prior Years Avg.";
+        } else {
+            averageLabel.textContent = "Prior 30 Days Avg.";
+        }
 
         if (!data || data.length === 0) {
             recordCount.textContent = "-";
             average.textContent = "-";
-            highest.textContent = "-";
-            lowest.textContent = "-";
+            today.textContent = "-";
+            difference.textContent = "-";
             return;
         }
 
-        const values = data.map(x => Number(x.gallonsPumped || 0));
-        const sum = values.reduce((a, b) => a + b, 0);
-        const avg = sum / values.length;
-        const max = Math.max(...values);
-        const min = Math.min(...values);
+        const stats = getComparisonStats(data);
 
-        recordCount.textContent = values.length.toLocaleString();
-        average.textContent = formatGallons(avg);
-        highest.textContent = formatGallons(max);
-        lowest.textContent = formatGallons(min);
+        recordCount.textContent = data.length.toLocaleString();
+        average.textContent = formatGallons(stats.average);
+        today.textContent = formatGallons(stats.todayValue);
+
+        const roundedDifference = Math.round(stats.difference);
+        const sign = roundedDifference > 0 ? "+" : "";
+
+        difference.textContent = `${sign}${roundedDifference.toLocaleString()}`;
     }
 
     function formatGallons(value) {
