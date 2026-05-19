@@ -31,10 +31,11 @@ namespace Well_Readings.Controllers
             using var workbook = new XLWorkbook(stream);
 
             var worksheet =
-                workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Export", StringComparison.OrdinalIgnoreCase))
-                ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Form Responses 1", StringComparison.OrdinalIgnoreCase))
-                ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Data", StringComparison.OrdinalIgnoreCase))
-                ?? workbook.Worksheets.First();
+    workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("SCADA Import", StringComparison.OrdinalIgnoreCase))
+    ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Export", StringComparison.OrdinalIgnoreCase))
+    ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Form Responses 1", StringComparison.OrdinalIgnoreCase))
+    ?? workbook.Worksheets.FirstOrDefault(x => x.Name.Equals("Data", StringComparison.OrdinalIgnoreCase))
+    ?? workbook.Worksheets.First();
 
             var headerRow = worksheet.Row(1);
             var lastColumn = worksheet.LastColumnUsed().ColumnNumber();

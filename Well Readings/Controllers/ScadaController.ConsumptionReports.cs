@@ -376,8 +376,8 @@ namespace Well_Readings.Controllers
         }
 
         private async Task<decimal> GetPumpedTotalForInclusivePeriodAsync(
-            DateTime startDate,
-            DateTime endDate)
+    DateTime startDate,
+    DateTime endDate)
         {
             var startEnd = startDate.Date.AddDays(1);
             var endEnd = endDate.Date.AddDays(1);
@@ -390,35 +390,80 @@ namespace Well_Readings.Controllers
 
             foreach (var location in validLocations)
             {
-                var startReading = await _context.ScadaHistoryPoints
-                    .Where(x =>
-                        x.Location == location &&
-                        x.MetricType == "Meter Reading" &&
-                        x.Timestamp < startEnd &&
-                        x.Value != null)
-                    .OrderByDescending(x => x.Timestamp)
-                    .FirstOrDefaultAsync();
+                total += await GetMeterUsageForPeriodAsync(location, startEnd, endEnd);
+            }
 
-                var endReading = await _context.ScadaHistoryPoints
-                    .Where(x =>
-                        x.Location == location &&
-                        x.MetricType == "Meter Reading" &&
-                        x.Timestamp < endEnd &&
-                        x.Value != null)
-                    .OrderByDescending(x => x.Timestamp)
-                    .FirstOrDefaultAsync();
+            return total;
+        }
 
-                if (startReading?.Value == null || endReading?.Value == null)
+        private async Task<decimal> GetMeterUsageForPeriodAsync(
+            string location,
+            DateTime startBoundary,
+            DateTime endBoundary)
+        {
+            var startReading = await _context.ScadaHistoryPoints
+                .Where(x =>
+                    x.Location == location &&
+                    x.MetricType == "Meter Reading" &&
+                    x.Timestamp < startBoundary &&
+                    x.Value != null)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+
+            var endReading = await _context.ScadaHistoryPoints
+                .Where(x =>
+                    x.Location == location &&
+                    x.MetricType == "Meter Reading" &&
+                    x.Timestamp < endBoundary &&
+                    x.Value != null)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+
+            if (startReading?.Value == null || endReading?.Value == null)
+            {
+                return 0;
+            }
+
+            var simpleDelta = endReading.Value.Value - startReading.Value.Value;
+
+            if (simpleDelta >= 0)
+            {
+                return simpleDelta;
+            }
+
+            var replacements = await _context.MeterReplacements
+                .Where(x =>
+                    x.Location == location &&
+                    x.ReplacementDate >= startReading.Timestamp.Date &&
+                    x.ReplacementDate <= endReading.Timestamp.Date)
+                .OrderBy(x => x.ReplacementDate)
+                .ToListAsync();
+
+            if (!replacements.Any())
+            {
+                return 0;
+            }
+
+            decimal total = 0;
+            var previousReading = startReading.Value.Value;
+
+            foreach (var replacement in replacements)
+            {
+                var oldMeterUsage = replacement.OldMeterFinalReading - previousReading;
+
+                if (oldMeterUsage > 0)
                 {
-                    continue;
+                    total += oldMeterUsage;
                 }
 
-                var gallons = endReading.Value.Value - startReading.Value.Value;
+                previousReading = replacement.NewMeterStartingReading;
+            }
 
-                if (gallons > 0)
-                {
-                    total += gallons;
-                }
+            var finalNewMeterUsage = endReading.Value.Value - previousReading;
+
+            if (finalNewMeterUsage > 0)
+            {
+                total += finalNewMeterUsage;
             }
 
             return total;

@@ -127,11 +127,45 @@ namespace Well_Readings.Controllers
                 .FirstOrDefaultAsync();
 
             if (current?.Value == null || previous?.Value == null)
+            {
                 return 0;
+            }
 
             var delta = current.Value.Value - previous.Value.Value;
 
-            return delta < 0 ? 0 : delta;
+            if (delta >= 0)
+            {
+                return delta;
+            }
+
+            var replacement = await _context.MeterReplacements
+                .Where(x =>
+                    x.Location == location &&
+                    x.ReplacementDate >= start &&
+                    x.ReplacementDate < end)
+                .OrderByDescending(x => x.ReplacementDate)
+                .FirstOrDefaultAsync();
+
+            if (replacement == null)
+            {
+                return 0;
+            }
+
+            var oldMeterUsage = replacement.OldMeterFinalReading - previous.Value.Value;
+
+            if (oldMeterUsage < 0)
+            {
+                oldMeterUsage = 0;
+            }
+
+            var newMeterUsage = current.Value.Value - replacement.NewMeterStartingReading;
+
+            if (newMeterUsage < 0)
+            {
+                newMeterUsage = 0;
+            }
+
+            return oldMeterUsage + newMeterUsage;
         }
 
         [HttpPost("import-excel")]

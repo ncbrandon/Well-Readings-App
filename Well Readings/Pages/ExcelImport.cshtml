@@ -17,6 +17,65 @@
 </section>
 
 <section class="card">
+    <h2>New Meter / Meter Replacement</h2>
+
+    <p>
+        Use this when a well meter is replaced or reset to zero. This lets the app calculate gallons correctly across the meter change.
+    </p>
+
+    <div class="row">
+        <label>Location</label>
+        <select id="meterReplacementLocation">
+            <option value="Reeves Well">Reeves Well</option>
+            <option value="Reeves Well A">Reeves Well A</option>
+            <option value="Park Well">Park Well</option>
+            <option value="Park Well A">Park Well A</option>
+            <option value="Park Well B">Park Well B</option>
+            <option value="Woods">Woods</option>
+            <option value="Catawissa">Catawissa</option>
+            <option value="New">New</option>
+            <option value="Oakwood">Oakwood</option>
+            <option value="Ray">Ray</option>
+            <option value="Filter Plant">Filter Plant</option>
+            <option value="Mt. Jefferson">Mt. Jefferson</option>
+        </select>
+
+        <label>Replacement Date</label>
+        <input type="date" id="meterReplacementDate" />
+
+        <label>Old Meter Final Reading</label>
+        <input type="number" id="oldMeterFinalReading" min="0" step="1" />
+
+        <label>New Meter Starting Reading</label>
+        <input type="number" id="newMeterStartingReading" min="0" step="1" />
+    </div>
+
+    <div class="row" style="margin-top: 12px;">
+        <label>Notes</label>
+        <input type="text" id="meterReplacementNotes" style="min-width: 420px;" placeholder="Example: New meter installed, old final was 1,000,000." />
+
+        <button type="button" onclick="saveMeterReplacement()">Save Meter Replacement</button>
+        <button type="button" onclick="loadMeterReplacements()">Refresh List</button>
+    </div>
+
+    <div id="meterReplacementResult" class="result"></div>
+
+    <table class="meter-replacement-table">
+        <thead>
+            <tr>
+                <th>Location</th>
+                <th>Replacement Date</th>
+                <th>Old Final</th>
+                <th>New Start</th>
+                <th>Notes</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="meterReplacementBody"></tbody>
+    </table>
+</section>
+
+<section class="card">
     <h2>Export Logged Entries</h2>
 
     <p>
@@ -81,6 +140,40 @@
         font-weight: bold;
         white-space: pre-line;
     }
+
+    select {
+        padding: 8px;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        margin-right: 10px;
+        background: white;
+        color: #111827;
+    }
+
+    .meter-replacement-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        color: #111827;
+        margin-top: 15px;
+    }
+
+        .meter-replacement-table th,
+        .meter-replacement-table td {
+            border: 1px solid #d1d5db;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .meter-replacement-table th {
+            background: #1f2937;
+            color: white;
+        }
+
+        .meter-replacement-table tbody tr:nth-child(even) {
+            background: #eff6ff;
+        }
+
 </style>
 
 <script>
@@ -92,6 +185,9 @@
 
         document.getElementById("exportStartDate").valueAsDate = firstDay;
         document.getElementById("exportEndDate").valueAsDate = today;
+        document.getElementById("meterReplacementDate").valueAsDate = today;
+        
+        loadMeterReplacements();
     }
 
     async function uploadExcel() {
@@ -130,6 +226,122 @@
             "Imported: " + data.imported + "\n" +
             "Updated: " + data.updated + "\n" +
             "Skipped rows: " + data.skipped;
+    }
+
+        async function saveMeterReplacement() {
+        const result = document.getElementById("meterReplacementResult");
+
+        const location = document.getElementById("meterReplacementLocation").value;
+        const replacementDate = document.getElementById("meterReplacementDate").value;
+        const oldMeterFinalReading = Number(document.getElementById("oldMeterFinalReading").value || 0);
+        const newMeterStartingReading = Number(document.getElementById("newMeterStartingReading").value || 0);
+        const notes = document.getElementById("meterReplacementNotes").value || "";
+
+        if (!location || !replacementDate) {
+            alert("Please select a location and replacement date.");
+            return;
+        }
+
+        const response = await fetch("/api/scada/meter-replacements", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                location,
+                replacementDate,
+                oldMeterFinalReading,
+                newMeterStartingReading,
+                notes
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            result.style.color = "#b91c1c";
+            result.innerText = "Save failed:\n" + errorText;
+            return;
+        }
+
+        result.style.color = "#047857";
+        result.innerText = "Meter replacement saved.";
+
+        await loadMeterReplacements();
+    }
+
+    async function loadMeterReplacements() {
+        const body = document.getElementById("meterReplacementBody");
+        body.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
+
+        const response = await fetch("/api/scada/meter-replacements");
+
+        if (!response.ok) {
+            body.innerHTML = `<tr><td colspan="6">Could not load meter replacements.</td></tr>`;
+            return;
+        }
+
+        const rows = await response.json();
+
+        if (!rows || rows.length === 0) {
+            body.innerHTML = `<tr><td colspan="6">No meter replacements saved.</td></tr>`;
+            return;
+        }
+
+        body.innerHTML = "";
+
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${row.location}</td>
+                <td>${formatDateOnly(row.replacementDate)}</td>
+                <td>${formatNumber(row.oldMeterFinalReading)}</td>
+                <td>${formatNumber(row.newMeterStartingReading)}</td>
+                <td>${row.notes ?? ""}</td>
+                <td>
+                    <button type="button" onclick="deleteMeterReplacement('${row.id}')">Delete</button>
+                </td>
+            `;
+
+            body.appendChild(tr);
+        });
+    }
+
+    async function deleteMeterReplacement(id) {
+        if (!confirm("Delete this meter replacement?")) {
+            return;
+        }
+
+        const response = await fetch(`/api/scada/meter-replacements/${id}`, {
+            method: "DELETE"
+        });
+
+        if (!response.ok) {
+            alert("Delete failed.");
+            return;
+        }
+
+        await loadMeterReplacements();
+    }
+
+    function formatDateOnly(value) {
+        if (!value) return "";
+
+        return new Date(value).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        });
+    }
+
+    function formatNumber(value) {
+        if (value === null || value === undefined || value === "") {
+            return "0";
+        }
+
+        return Number(value).toLocaleString(undefined, {
+            maximumFractionDigits: 0
+        });
     }
 
     function exportExcel() {

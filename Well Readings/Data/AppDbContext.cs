@@ -23,6 +23,7 @@ namespace Well_Readings.Data
         public DbSet<ValidMeterLocation> ValidMeterLocations { get; set; }
         public DbSet<DistributionPointEntry> DistributionPointEntries { get; set; }
         public DbSet<ConsumptionReport> ConsumptionReports { get; set; }
+        public DbSet<MeterReplacement> MeterReplacements { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -165,6 +166,35 @@ namespace Well_Readings.Data
                     .IsRequired();
 
                 entity.HasIndex(x => new { x.LastReadDate, x.CurrentReadDate });
+            });
+
+            modelBuilder.Entity<MeterReplacement>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Location)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.ReplacementDate)
+                    .IsRequired();
+
+                entity.Property(x => x.OldMeterFinalReading)
+                    .HasPrecision(18, 0);
+
+                entity.Property(x => x.NewMeterStartingReading)
+                    .HasPrecision(18, 0);
+
+                entity.Property(x => x.Notes)
+                    .HasMaxLength(2000);
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(x => x.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => new { x.Location, x.ReplacementDate });
             });
 
             modelBuilder.Entity<ValidMeterLocation>().HasData(
