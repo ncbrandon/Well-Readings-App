@@ -22,6 +22,7 @@ namespace Well_Readings.Data
         public DbSet<MaintenanceSiteStatus> MaintenanceSiteStatuses { get; set; }
         public DbSet<ValidMeterLocation> ValidMeterLocations { get; set; }
         public DbSet<DistributionPointEntry> DistributionPointEntries { get; set; }
+        public DbSet<ConsumptionReport> ConsumptionReports { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -117,6 +118,53 @@ namespace Well_Readings.Data
 
                 entity.Property(x => x.UpdatedAt)
                     .IsRequired();
+            });
+
+            modelBuilder.Entity<ConsumptionReport>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.PeriodLabel)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.LastReadDate)
+                    .IsRequired();
+
+                entity.Property(x => x.CurrentReadDate)
+                    .IsRequired();
+
+                entity.Property(x => x.BillingDays)
+                    .IsRequired();
+
+                entity.Property(x => x.WaterPumped)
+                    .HasPrecision(18, 0);
+
+                entity.Property(x => x.WaterConsumed)
+                    .HasPrecision(18, 0);
+
+                entity.Property(x => x.WaterLoss)
+                    .HasPrecision(18, 0);
+
+                entity.Property(x => x.LossPercent)
+                    .HasPrecision(8, 4);
+
+                entity.Property(x => x.PumpedAveragePerDay)
+                    .HasPrecision(18, 2);
+
+                entity.Property(x => x.ConsumedAveragePerDay)
+                    .HasPrecision(18, 2);
+
+                entity.Property(x => x.Notes)
+                    .HasMaxLength(2000);
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(x => x.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => new { x.LastReadDate, x.CurrentReadDate });
             });
 
             modelBuilder.Entity<ValidMeterLocation>().HasData(
