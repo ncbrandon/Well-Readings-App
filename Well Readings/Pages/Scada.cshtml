@@ -17,9 +17,74 @@
         <div class="kpi-value" id="pumpedToday">0</div>
     </div>
 
-    <div class="kpi">
-        <div class="kpi-label">Active Alarms</div>
-        <div class="kpi-value" id="alarmCount">0</div>
+    <div class="kpi kpi-clickable" id="pumpedHistoryTile" onclick="togglePumpedHistory()">
+        <div class="kpi-label">Pumped History</div>
+        <div class="kpi-value">View</div>
+    </div>
+</div>
+
+<div id="pumpedHistoryPanel" class="pumped-history-panel" style="display:none;">
+    <div class="pumped-history-header">
+        <div>
+            <h3>Pumped History</h3>
+            <p>Use this to quickly compare recent pumping totals and spot unusually high usage.</p>
+        </div>
+
+        <button type="button" class="close-history-btn" onclick="togglePumpedHistory(false)">×</button>
+    </div>
+
+    <div class="history-button-row">
+        <button type="button" class="history-mode-btn active" id="btn30Days" onclick="loadPumpedHistory('30days')">
+            Previous 30 Days
+        </button>
+
+        <button type="button" class="history-mode-btn" id="btnYearsToday" onclick="loadPumpedHistory('yearsToday')">
+            Previous Years Today
+        </button>
+    </div>
+
+    <div id="pumpedHistoryStatus" class="history-status">
+        Select an option to load pumped history.
+    </div>
+
+    <div class="history-summary-row">
+        <div class="history-summary-card">
+            <div class="history-summary-label">Records</div>
+            <div class="history-summary-value" id="historyRecordCount">-</div>
+        </div>
+
+        <div class="history-summary-card">
+            <div class="history-summary-label">Average</div>
+            <div class="history-summary-value" id="historyAverage">-</div>
+        </div>
+
+        <div class="history-summary-card">
+            <div class="history-summary-label">Highest</div>
+            <div class="history-summary-value" id="historyHighest">-</div>
+        </div>
+
+        <div class="history-summary-card">
+            <div class="history-summary-label">Lowest</div>
+            <div class="history-summary-value" id="historyLowest">-</div>
+        </div>
+    </div>
+
+    <div class="history-chart-wrap">
+        <canvas id="pumpedHistoryChart"></canvas>
+    </div>
+
+    <div class="history-table-wrap">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Date</th>
+                    <th>Gallons Pumped</th>
+                </tr>
+            </thead>
+            <tbody id="pumpedHistoryTableBody">
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -39,24 +104,185 @@
     }
 
     @@keyframes flashRed {
-        0%
+        0% {
+            background-color: #7f1d1d;
+        }
 
-    {
-        background-color: #7f1d1d;
+        50% {
+            background-color: #dc2626;
+        }
+
+        100% {
+            background-color: #7f1d1d;
+        }
     }
 
-    50% {
-        background-color: #dc2626;
+    .kpi-clickable {
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
 
-    100% {
-        background-color: #7f1d1d;
+        .kpi-clickable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+        }
+
+    .pumped-history-panel {
+        margin-bottom: 1rem;
+        padding: 1.25rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+        border: 1px solid rgba(0, 0, 0, 0.08);
     }
 
+    .pumped-history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+        .pumped-history-header h3 {
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+        .pumped-history-header p {
+            margin: 0.25rem 0 0;
+            color: #555;
+        }
+
+    .close-history-btn {
+        border: none;
+        background: transparent;
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+        color: #333;
+    }
+
+    .history-button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .history-mode-btn {
+        border: 1px solid #ccc;
+        background: #f7f7f7;
+        padding: 0.6rem 1rem;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+        .history-mode-btn.active {
+            background: #1f6feb;
+            color: white;
+            border-color: #1f6feb;
+        }
+
+    .history-status {
+        margin-bottom: 1rem;
+        color: #555;
+        font-weight: 700;
+    }
+
+    .history-summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .history-summary-card {
+        background: #f7f9fc;
+        border: 1px solid #e1e6ef;
+        border-radius: 14px;
+        padding: 0.85rem;
+    }
+
+    .history-summary-label {
+        color: #555;
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .history-summary-value {
+        font-size: 1.25rem;
+        font-weight: 800;
+    }
+
+    .history-chart-wrap {
+        height: 320px;
+        margin-bottom: 1.25rem;
+    }
+
+    .history-table-wrap {
+        max-height: 420px;
+        overflow: auto;
+        border: 1px solid #e1e1e1;
+        border-radius: 12px;
+        background: white;
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        .history-table th {
+            background: #f5f7fa;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+            .history-table td:last-child,
+            .history-table th:last-child {
+                text-align: right;
+            }
+
+    .high-pumped-row {
+        background: #fff4f4;
+        font-weight: 700;
+    }
+
+    @@media (max-width: 900px) {
+        .history-summary-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 600px) {
+        .history-summary-row {
+            grid-template-columns: 1fr;
+        }
+
+        .pumped-history-header {
+            align-items: center;
+        }
     }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
+    let pumpedHistoryChart = null;
+
     async function loadScada() {
         const res = await fetch('/api/scada/dashboard');
         const data = await res.json();
@@ -64,9 +290,8 @@
         const wells = data.wells || [];
 
         document.getElementById('wellCount').innerText = wells.length;
-        document.getElementById('pumpedYesterday').innerText = data.pumpedYesterday ?? 0;
-        document.getElementById('pumpedToday').innerText = data.pumpedToday ?? 0;
-        document.getElementById('alarmCount').innerText = data.activeAlarms ?? 0;
+        document.getElementById('pumpedYesterday').innerText = formatGallons(data.pumpedYesterday ?? 0);
+        document.getElementById('pumpedToday').innerText = formatGallons(data.pumpedToday ?? 0);
 
         const grid = document.getElementById('wellGrid');
         grid.innerHTML = '';
@@ -80,12 +305,12 @@
 
                 <div class="well-stat">
                     <span>Gallons Yesterday</span>
-                    <span>${well.gallonsYesterday}</span>
+                    <span>${formatGallons(well.gallonsYesterday)}</span>
                 </div>
 
                 <div class="well-stat">
                     <span>Gallons Today</span>
-                    <span>${well.gallonsToday}</span>
+                    <span>${formatGallons(well.gallonsToday)}</span>
                 </div>
             `;
 
@@ -116,6 +341,164 @@
 
             pumpGrid.appendChild(div);
         });
+    }
+
+    function togglePumpedHistory(forceShow) {
+        const panel = document.getElementById("pumpedHistoryPanel");
+
+        const shouldShow = forceShow !== undefined
+            ? forceShow
+            : panel.style.display === "none";
+
+        panel.style.display = shouldShow ? "block" : "none";
+
+        if (shouldShow) {
+            loadPumpedHistory("30days");
+        }
+    }
+
+    async function loadPumpedHistory(mode) {
+        const status = document.getElementById("pumpedHistoryStatus");
+        const tableBody = document.getElementById("pumpedHistoryTableBody");
+
+        const btn30 = document.getElementById("btn30Days");
+        const btnYears = document.getElementById("btnYearsToday");
+
+        btn30.classList.toggle("active", mode === "30days");
+        btnYears.classList.toggle("active", mode === "yearsToday");
+
+        status.textContent = "Loading pumped history...";
+        tableBody.innerHTML = "";
+
+        updateHistorySummary([]);
+
+        try {
+            const response = await fetch(`/Scada?handler=PumpedHistory&mode=${encodeURIComponent(mode)}`);
+
+            if (!response.ok) {
+                throw new Error("Request failed");
+            }
+
+            const data = await response.json();
+
+            if (!data || data.length === 0) {
+                status.textContent = "No pumped history found.";
+                renderPumpedHistoryChart([]);
+                return;
+            }
+
+            if (mode === "30days") {
+                status.textContent = "Showing pumped water totals for the previous 30 days.";
+            } else {
+                status.textContent = "Showing pumped water totals for this same calendar date in previous years.";
+            }
+
+            const values = data.map(x => Number(x.gallonsPumped || 0));
+            const average = values.reduce((a, b) => a + b, 0) / values.length;
+
+            for (const row of data) {
+                const gallons = Number(row.gallonsPumped || 0);
+                const tr = document.createElement("tr");
+
+                if (average > 0 && gallons > average * 1.25) {
+                    tr.classList.add("high-pumped-row");
+                }
+
+                tr.innerHTML = `
+                    <td>${row.dayName ?? ""}</td>
+                    <td>${row.displayDate ?? ""}</td>
+                    <td>${formatGallons(gallons)}</td>
+                `;
+
+                tableBody.appendChild(tr);
+            }
+
+            updateHistorySummary(data);
+            renderPumpedHistoryChart(data);
+        } catch (error) {
+            console.error(error);
+            status.textContent = "Could not load pumped history.";
+            renderPumpedHistoryChart([]);
+        }
+    }
+
+    function renderPumpedHistoryChart(data) {
+        const ctx = document.getElementById("pumpedHistoryChart");
+
+        if (pumpedHistoryChart) {
+            pumpedHistoryChart.destroy();
+        }
+
+        pumpedHistoryChart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: data.map(x => x.displayDate),
+                datasets: [{
+                    label: "Gallons Pumped",
+                    data: data.map(x => x.gallonsPumped)
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return formatGallons(context.raw) + " gallons";
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return Number(value).toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateHistorySummary(data) {
+        const recordCount = document.getElementById("historyRecordCount");
+        const average = document.getElementById("historyAverage");
+        const highest = document.getElementById("historyHighest");
+        const lowest = document.getElementById("historyLowest");
+
+        if (!data || data.length === 0) {
+            recordCount.textContent = "-";
+            average.textContent = "-";
+            highest.textContent = "-";
+            lowest.textContent = "-";
+            return;
+        }
+
+        const values = data.map(x => Number(x.gallonsPumped || 0));
+        const sum = values.reduce((a, b) => a + b, 0);
+        const avg = sum / values.length;
+        const max = Math.max(...values);
+        const min = Math.min(...values);
+
+        recordCount.textContent = values.length.toLocaleString();
+        average.textContent = formatGallons(avg);
+        highest.textContent = formatGallons(max);
+        lowest.textContent = formatGallons(min);
+    }
+
+    function formatGallons(value) {
+        if (value === null || value === undefined || isNaN(value)) {
+            return "0";
+        }
+
+        return Math.round(Number(value)).toLocaleString();
     }
 
     loadScada();
