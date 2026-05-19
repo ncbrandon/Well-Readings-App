@@ -760,7 +760,239 @@ namespace Well_Readings.Controllers
             return Ok(rows);
         }
 
+        [HttpGet("consumption-report")]
+        public async Task<IActionResult> GetConsumptionReport(
+    DateTime lastReadDate,
+    DateTime currentReadDate,
+    decimal consumedGallons,
+    string? notes = null)
+        {
+            if (currentReadDate.Date <= lastReadDate.Date)
+            {
+                return BadRequest("Current meter read date must be after last meter read date.");
+            }
 
+            var report = await BuildConsumptionReportAsync(
+                lastReadDate,
+                currentReadDate,
+                consumedGallons,
+                notes);
+
+            return Ok(report);
+        }
+
+        [HttpGet("consumption-report-export")]
+        public async Task<IActionResult> ExportConsumptionReport(
+            DateTime lastReadDate,
+            DateTime currentReadDate,
+            decimal consumedGallons,
+            string? notes = null)
+        {
+            if (currentReadDate.Date <= lastReadDate.Date)
+            {
+                return BadRequest("Current meter read date must be after last meter read date.");
+            }
+
+            var report = await BuildConsumptionReportAsync(
+                lastReadDate,
+                currentReadDate,
+                consumedGallons,
+                notes);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Consumption Report");
+
+            worksheet.Cell("A1").Value = "Water Pumped vs. Water Consumed Report";
+            worksheet.Range("A1:F1").Merge();
+            worksheet.Cell("A1").Style.Font.Bold = true;
+            worksheet.Cell("A1").Style.Font.FontSize = 16;
+            worksheet.Cell("A1").Style.Fill.BackgroundColor = XLColor.FromHtml("#1f2937");
+            worksheet.Cell("A1").Style.Font.FontColor = XLColor.White;
+            worksheet.Cell("A1").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            worksheet.Cell("A3").Value = "Last Meter Read Date";
+            worksheet.Cell("B3").Value = report.LastReadDate;
+            worksheet.Cell("A4").Value = "Current Meter Read Date";
+            worksheet.Cell("B4").Value = report.CurrentReadDate;
+            worksheet.Cell("A5").Value = "Billing Days";
+            worksheet.Cell("B5").Value = report.BillingDays;
+
+            worksheet.Cell("A7").Value = "Water Pumped";
+            worksheet.Cell("B7").Value = report.WaterPumped;
+
+            worksheet.Cell("A8").Value = "Water Consumed";
+            worksheet.Cell("B8").Value = report.WaterConsumed;
+
+            worksheet.Cell("A9").Value = "Unaccounted For / Loss";
+            worksheet.Cell("B9").Value = report.WaterLoss;
+
+            worksheet.Cell("A10").Value = "% of Pumped Loss";
+            worksheet.Cell("B10").Value = report.LossPercent;
+
+            worksheet.Cell("A11").Value = "Pumped Avg/Day";
+            worksheet.Cell("B11").Value = report.PumpedAveragePerDay;
+
+            worksheet.Cell("A12").Value = "Consumed Avg/Day";
+            worksheet.Cell("B12").Value = report.ConsumedAveragePerDay;
+
+            worksheet.Cell("A14").Value = "Notes";
+            worksheet.Cell("B14").Value = report.Notes ?? "";
+
+            worksheet.Range("A3:A14").Style.Font.Bold = true;
+            worksheet.Range("A3:B14").Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            worksheet.Range("A3:B14").Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            worksheet.Range("B3:B4").Style.DateFormat.Format = "mm/dd/yyyy";
+            worksheet.Range("B7:B9").Style.NumberFormat.Format = "#,##0";
+            worksheet.Range("B10").Style.NumberFormat.Format = "0.00%";
+            worksheet.Range("B11:B12").Style.NumberFormat.Format = "#,##0";
+
+            worksheet.Columns().AdjustToContents();
+
+            var chartTableStart = 17;
+
+            worksheet.Cell(chartTableStart, 1).Value = "Category";
+            worksheet.Cell(chartTableStart, 2).Value = "Gallons";
+
+            worksheet.Cell(chartTableStart + 1, 1).Value = "Water Pumped";
+            worksheet.Cell(chartTableStart + 1, 2).Value = report.WaterPumped;
+
+            worksheet.Cell(chartTableStart + 2, 1).Value = "Water Consumed";
+            worksheet.Cell(chartTableStart + 2, 2).Value = report.WaterConsumed;
+
+            worksheet.Cell(chartTableStart + 3, 1).Value = "Unaccounted For";
+            worksheet.Cell(chartTableStart + 3, 2).Value = report.WaterLoss;
+
+            worksheet.Range(chartTableStart, 1, chartTableStart + 3, 2).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            worksheet.Range(chartTableStart, 1, chartTableStart + 3, 2).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            worksheet.Range(chartTableStart, 1, chartTableStart, 2).Style.Font.Bold = true;
+            worksheet.Range(chartTableStart, 1, chartTableStart, 2).Style.Fill.BackgroundColor = XLColor.FromHtml("#dbeafe");
+            worksheet.Range(chartTableStart + 1, 2, chartTableStart + 3, 2).Style.NumberFormat.Format = "#,##0";
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            var fileName =
+                $"Consumption_Report_{report.LastReadDate:yyyyMMdd}_to_{report.CurrentReadDate:yyyyMMdd}.xlsx";
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        private async Task<ConsumptionReportDto> BuildConsumptionReportAsync(
+            DateTime lastReadDate,
+            DateTime currentReadDate,
+            decimal consumedGallons,
+            string? notes)
+        {
+            var billingDays = (currentReadDate.Date - lastReadDate.Date).Days;
+
+            if (billingDays <= 0)
+            {
+                billingDays = 1;
+            }
+
+            var waterPumped = await GetPumpedTotalForPeriodAsync(lastReadDate, currentReadDate);
+            var waterConsumed = consumedGallons;
+            var waterLoss = waterPumped - waterConsumed;
+
+            if (waterLoss < 0)
+            {
+                waterLoss = 0;
+            }
+
+            var lossPercent = waterPumped > 0
+                ? waterLoss / waterPumped
+                : 0;
+
+            return new ConsumptionReportDto
+            {
+                LastReadDate = lastReadDate.Date,
+                CurrentReadDate = currentReadDate.Date,
+                BillingDays = billingDays,
+                WaterPumped = waterPumped,
+                WaterConsumed = waterConsumed,
+                WaterLoss = waterLoss,
+                LossPercent = lossPercent,
+                PumpedAveragePerDay = waterPumped / billingDays,
+                ConsumedAveragePerDay = waterConsumed / billingDays,
+                Notes = notes ?? ""
+            };
+        }
+
+        private async Task<decimal> GetPumpedTotalForPeriodAsync(
+            DateTime lastReadDate,
+            DateTime currentReadDate)
+        {
+            var startEnd = lastReadDate.Date.AddDays(1);
+            var currentEnd = currentReadDate.Date.AddDays(1);
+
+            var validLocations = await _context.ValidMeterLocations
+                .Select(x => x.Location)
+                .ToListAsync();
+
+            decimal total = 0;
+
+            foreach (var location in validLocations)
+            {
+                var startReading = await _context.ScadaHistoryPoints
+                    .Where(x =>
+                        x.Location == location &&
+                        x.MetricType == "Meter Reading" &&
+                        x.Timestamp < startEnd &&
+                        x.Value != null)
+                    .OrderByDescending(x => x.Timestamp)
+                    .FirstOrDefaultAsync();
+
+                var currentReading = await _context.ScadaHistoryPoints
+                    .Where(x =>
+                        x.Location == location &&
+                        x.MetricType == "Meter Reading" &&
+                        x.Timestamp < currentEnd &&
+                        x.Value != null)
+                    .OrderByDescending(x => x.Timestamp)
+                    .FirstOrDefaultAsync();
+
+                if (startReading?.Value == null || currentReading?.Value == null)
+                {
+                    continue;
+                }
+
+                var gallons = currentReading.Value.Value - startReading.Value.Value;
+
+                if (gallons > 0)
+                {
+                    total += gallons;
+                }
+            }
+
+            return total;
+        }
+
+        public class ConsumptionReportDto
+        {
+            public DateTime LastReadDate { get; set; }
+
+            public DateTime CurrentReadDate { get; set; }
+
+            public int BillingDays { get; set; }
+
+            public decimal WaterPumped { get; set; }
+
+            public decimal WaterConsumed { get; set; }
+
+            public decimal WaterLoss { get; set; }
+
+            public decimal LossPercent { get; set; }
+
+            public decimal PumpedAveragePerDay { get; set; }
+
+            public decimal ConsumedAveragePerDay { get; set; }
+
+            public string Notes { get; set; } = "";
+        }
         private async Task<decimal> GetLatestValue(string location, string metricType)
         {
             return await _context.ScadaHistoryPoints

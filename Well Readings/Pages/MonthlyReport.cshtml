@@ -86,6 +86,86 @@
     </div>
 </section>
 
+<section class="report-card consumption-card">
+    <h2>Consumption Report</h2>
+
+    <p class="help-text">
+        Compare customer meter consumption against total water pumped between meter reading dates.
+    </p>
+
+    <div class="filter-row">
+        <label>Last Meter Read Date</label>
+        <input type="date" id="consumptionLastReadDate" />
+
+        <label>Current Meter Read Date</label>
+        <input type="date" id="consumptionCurrentReadDate" />
+
+        <label>Total Consumer Gallons</label>
+        <input type="number" id="consumerGallons" placeholder="Example: 5147670" min="0" step="1" />
+
+        <button type="button" onclick="loadConsumptionReport()">Run Consumption Report</button>
+        <button type="button" onclick="exportConsumptionReport()">Export Spreadsheet</button>
+    </div>
+
+    <label class="notes-label">Notes / Known Issues</label>
+    <textarea id="consumptionNotes" class="notes-box" placeholder="Example: Known leak repaired on S. Jefferson Ave., hydrant flushing, main break, etc."></textarea>
+
+    <div id="consumptionWarning" class="consumption-warning consumption-warning-neutral">
+        Enter the billing meter read dates and total consumer gallons, then run the report.
+    </div>
+
+    <div class="consumption-kpi-grid">
+        <div class="consumption-kpi">
+            <div class="consumption-kpi-label">Water Pumped</div>
+            <div class="consumption-kpi-value" id="consumptionPumped">0</div>
+        </div>
+
+        <div class="consumption-kpi">
+            <div class="consumption-kpi-label">Water Consumed</div>
+            <div class="consumption-kpi-value" id="consumptionConsumed">0</div>
+        </div>
+
+        <div class="consumption-kpi">
+            <div class="consumption-kpi-label">Unaccounted For</div>
+            <div class="consumption-kpi-value" id="consumptionLoss">0</div>
+        </div>
+
+        <div class="consumption-kpi">
+            <div class="consumption-kpi-label">% Loss</div>
+            <div class="consumption-kpi-value" id="consumptionLossPercent">0%</div>
+        </div>
+    </div>
+
+    <div class="consumption-detail-grid">
+        <div>
+            <strong>Billing Days:</strong>
+            <span id="consumptionBillingDays">0</span>
+        </div>
+
+        <div>
+            <strong>Pumped Avg/Day:</strong>
+            <span id="consumptionPumpedAvg">0</span>
+        </div>
+
+        <div>
+            <strong>Consumed Avg/Day:</strong>
+            <span id="consumptionConsumedAvg">0</span>
+        </div>
+
+        <div>
+            <strong>Date Range:</strong>
+            <span id="consumptionDateRange">-</span>
+        </div>
+    </div>
+
+    <div class="consumption-chart-wrap">
+        <canvas id="consumptionChart"></canvas>
+    </div>
+</section>
+
+<section class="report-card">
+    <h2>Pump Station Report</h2>
+
 <section class="report-card">
     <h2>Pump Station Report</h2>
 
@@ -323,7 +403,134 @@
         color: #374151;
         font-weight: bold;
     }
+
+        .consumption-card {
+            border: 2px solid #bfdbfe;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef6ff 100%);
+        }
+
+        .notes-label {
+            display: block;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 6px;
+        }
+
+        .notes-box {
+            width: 100%;
+            min-height: 90px;
+            padding: 10px;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            color: #111827;
+            background: white;
+            font-family: inherit;
+            margin-bottom: 16px;
+        }
+
+        .consumption-warning {
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            border: 1px solid transparent;
+        }
+
+        .consumption-warning-neutral {
+            background: #f3f4f6;
+            color: #1f2937;
+            border-color: #d1d5db;
+        }
+
+        .consumption-warning-good {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+
+        .consumption-warning-watch {
+            background: #fffbeb;
+            color: #92400e;
+            border-color: #fcd34d;
+        }
+
+        .consumption-warning-alert {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: #fca5a5;
+        }
+
+        .consumption-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .consumption-kpi {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .consumption-kpi-label {
+            font-weight: 800;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .consumption-kpi-value {
+            font-size: 24px;
+            font-weight: 900;
+            color: #111827;
+        }
+
+        .consumption-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+            color: #111827;
+        }
+
+        .consumption-chart-wrap {
+            height: 340px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        #consumerGallons {
+            padding: 8px;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #111827;
+            background: white;
+            width: 180px;
+        }
+
+        @@media (max-width: 900px) {
+            .consumption-kpi-grid,
+            .consumption-detail-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @@media (max-width: 600px) {
+            .consumption-kpi-grid,
+            .consumption-detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
         setDefaultDates();
@@ -336,6 +543,8 @@
             document.getElementById("siteEndDate").valueAsDate = today;
             document.getElementById("meterStartDate").valueAsDate = firstDay;
             document.getElementById("meterEndDate").valueAsDate = today;
+            document.getElementById("consumptionLastReadDate").valueAsDate = firstDay;
+            document.getElementById("consumptionCurrentReadDate").valueAsDate = today;
             document.getElementById("pumpStartDate").valueAsDate = firstDay;
             document.getElementById("pumpEndDate").valueAsDate = today;
             document.getElementById("ncMorStartDate").valueAsDate = firstDay;
@@ -670,6 +879,210 @@
             box.select();
             document.execCommand("copy");
             alert("NC MOR script copied.");
+        }
+
+                let consumptionChart = null;
+        let lastConsumptionReport = null;
+
+        async function loadConsumptionReport() {
+            const lastReadDate = document.getElementById("consumptionLastReadDate").value;
+            const currentReadDate = document.getElementById("consumptionCurrentReadDate").value;
+            const consumedGallons = document.getElementById("consumerGallons").value || 0;
+            const notes = document.getElementById("consumptionNotes").value || "";
+
+            if (!lastReadDate || !currentReadDate) {
+                alert("Please select the last meter read date and current meter read date.");
+                return;
+            }
+
+            if (Number(consumedGallons) <= 0) {
+                alert("Please enter the total consumer gallons from the meter readings.");
+                return;
+            }
+
+            const url =
+                `/api/scada/consumption-report` +
+                `?lastReadDate=${encodeURIComponent(lastReadDate)}` +
+                `&currentReadDate=${encodeURIComponent(currentReadDate)}` +
+                `&consumedGallons=${encodeURIComponent(consumedGallons)}` +
+                `&notes=${encodeURIComponent(notes)}`;
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                alert("Error loading consumption report.");
+                return;
+            }
+
+            const data = await response.json();
+            lastConsumptionReport = data;
+
+            renderConsumptionReport(data);
+        }
+
+        function renderConsumptionReport(data) {
+            document.getElementById("consumptionPumped").innerText = formatNumber(data.waterPumped);
+            document.getElementById("consumptionConsumed").innerText = formatNumber(data.waterConsumed);
+            document.getElementById("consumptionLoss").innerText = formatNumber(data.waterLoss);
+            document.getElementById("consumptionLossPercent").innerText = formatPercent(data.lossPercent);
+
+            document.getElementById("consumptionBillingDays").innerText = data.billingDays;
+            document.getElementById("consumptionPumpedAvg").innerText = formatNumber(data.pumpedAveragePerDay);
+            document.getElementById("consumptionConsumedAvg").innerText = formatNumber(data.consumedAveragePerDay);
+            document.getElementById("consumptionDateRange").innerText =
+                `${formatShortDate(data.lastReadDate)} through ${formatShortDate(data.currentReadDate)}`;
+
+            updateConsumptionWarning(data);
+            renderConsumptionChart(data);
+        }
+
+        function updateConsumptionWarning(data) {
+            const warning = document.getElementById("consumptionWarning");
+
+            warning.className = "consumption-warning consumption-warning-neutral";
+
+            const lossPercent = Number(data.lossPercent || 0);
+
+            if (lossPercent >= 0.30) {
+                warning.className = "consumption-warning consumption-warning-alert";
+                warning.innerText =
+                    `High water loss: ${formatPercent(lossPercent)} unaccounted for. ` +
+                    `${formatNumber(data.waterLoss)} gallons were pumped but not billed/consumed. ` +
+                    `Review known leaks, flushing, breaks, or meter issues.`;
+            } else if (lossPercent >= 0.20) {
+                warning.className = "consumption-warning consumption-warning-watch";
+                warning.innerText =
+                    `Watch: ${formatPercent(lossPercent)} unaccounted for. ` +
+                    `${formatNumber(data.waterLoss)} gallons difference between pumped and consumed.`;
+            } else {
+                warning.className = "consumption-warning consumption-warning-good";
+                warning.innerText =
+                    `Loss is ${formatPercent(lossPercent)} for this billing period. ` +
+                    `Unaccounted-for water: ${formatNumber(data.waterLoss)} gallons.`;
+            }
+        }
+
+        function renderConsumptionChart(data) {
+            const ctx = document.getElementById("consumptionChart");
+
+            if (consumptionChart) {
+                consumptionChart.destroy();
+            }
+
+            consumptionChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Water Pumped", "Water Consumed", "Unaccounted For"],
+                    datasets: [{
+                        label: "Gallons",
+                        data: [
+                            data.waterPumped,
+                            data.waterConsumed,
+                            data.waterLoss
+                        ],
+                        backgroundColor: [
+                            "#2563eb",
+                            "#059669",
+                            data.lossPercent >= 0.30 ? "#dc2626" : data.lossPercent >= 0.20 ? "#f59e0b" : "#64748b"
+                        ],
+                        borderColor: [
+                            "#1d4ed8",
+                            "#047857",
+                            data.lossPercent >= 0.30 ? "#991b1b" : data.lossPercent >= 0.20 ? "#b45309" : "#475569"
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return formatNumber(context.raw) + " gallons";
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: "#374151",
+                                font: {
+                                    weight: "bold"
+                                }
+                            },
+                            grid: {
+                                color: "rgba(0,0,0,0.08)"
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: "#374151",
+                                callback: function (value) {
+                                    return Number(value).toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: "rgba(0,0,0,0.08)"
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportConsumptionReport() {
+            const lastReadDate = document.getElementById("consumptionLastReadDate").value;
+            const currentReadDate = document.getElementById("consumptionCurrentReadDate").value;
+            const consumedGallons = document.getElementById("consumerGallons").value || 0;
+            const notes = document.getElementById("consumptionNotes").value || "";
+
+            if (!lastReadDate || !currentReadDate) {
+                alert("Please select the last meter read date and current meter read date.");
+                return;
+            }
+
+            if (Number(consumedGallons) <= 0) {
+                alert("Please enter the total consumer gallons before exporting.");
+                return;
+            }
+
+            const url =
+                `/api/scada/consumption-report-export` +
+                `?lastReadDate=${encodeURIComponent(lastReadDate)}` +
+                `&currentReadDate=${encodeURIComponent(currentReadDate)}` +
+                `&consumedGallons=${encodeURIComponent(consumedGallons)}` +
+                `&notes=${encodeURIComponent(notes)}`;
+
+            window.location.href = url;
+        }
+
+        function formatPercent(value) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return "0.00%";
+            }
+
+            return Number(value).toLocaleString(undefined, {
+                style: "percent",
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatShortDate(value) {
+            if (!value) return "";
+
+            return new Date(value).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            });
         }
 
         function formatDateTime(value) {
