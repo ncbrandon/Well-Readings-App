@@ -376,12 +376,9 @@ namespace Well_Readings.Controllers
         }
 
         private async Task<decimal> GetPumpedTotalForInclusivePeriodAsync(
-    DateTime startDate,
-    DateTime endDate)
+            DateTime startDate,
+            DateTime endDate)
         {
-            var startEnd = startDate.Date.AddDays(1);
-            var endEnd = endDate.Date.AddDays(1);
-
             var validLocations = await _context.ValidMeterLocations
                 .Select(x => x.Location)
                 .ToListAsync();
@@ -390,84 +387,88 @@ namespace Well_Readings.Controllers
 
             foreach (var location in validLocations)
             {
-                total += await GetMeterUsageForPeriodAsync(location, startEnd, endEnd);
-            }
-
-            return total;
-        }
-
-        private async Task<decimal> GetMeterUsageForPeriodAsync(
-            string location,
-            DateTime startBoundary,
-            DateTime endBoundary)
-        {
-            var startReading = await _context.ScadaHistoryPoints
-                .Where(x =>
-                    x.Location == location &&
-                    x.MetricType == "Meter Reading" &&
-                    x.Timestamp < startBoundary &&
-                    x.Value != null)
-                .OrderByDescending(x => x.Timestamp)
-                .FirstOrDefaultAsync();
-
-            var endReading = await _context.ScadaHistoryPoints
-                .Where(x =>
-                    x.Location == location &&
-                    x.MetricType == "Meter Reading" &&
-                    x.Timestamp < endBoundary &&
-                    x.Value != null)
-                .OrderByDescending(x => x.Timestamp)
-                .FirstOrDefaultAsync();
-
-            if (startReading?.Value == null || endReading?.Value == null)
-            {
-                return 0;
-            }
-
-            var simpleDelta = endReading.Value.Value - startReading.Value.Value;
-
-            if (simpleDelta >= 0)
-            {
-                return simpleDelta;
-            }
-
-            var replacements = await _context.MeterReplacements
-                .Where(x =>
-                    x.Location == location &&
-                    x.ReplacementDate >= startReading.Timestamp.Date &&
-                    x.ReplacementDate <= endReading.Timestamp.Date)
-                .OrderBy(x => x.ReplacementDate)
-                .ToListAsync();
-
-            if (!replacements.Any())
-            {
-                return 0;
-            }
-
-            decimal total = 0;
-            var previousReading = startReading.Value.Value;
-
-            foreach (var replacement in replacements)
-            {
-                var oldMeterUsage = replacement.OldMeterFinalReading - previousReading;
-
-                if (oldMeterUsage > 0)
+                for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
                 {
-                    total += oldMeterUsage;
+                    var gallons = await GetDeltaForDate(location, "Meter Reading", date);
+                    total += gallons;
                 }
-
-                previousReading = replacement.NewMeterStartingReading;
-            }
-
-            var finalNewMeterUsage = endReading.Value.Value - previousReading;
-
-            if (finalNewMeterUsage > 0)
-            {
-                total += finalNewMeterUsage;
             }
 
             return total;
         }
+
+        //private async Task<decimal> GetMeterUsageForPeriodAsync(
+        //    string location,
+        //    DateTime startBoundary,
+        //    DateTime endBoundary)
+        //{
+        //    var startReading = await _context.ScadaHistoryPoints
+        //        .Where(x =>
+        //            x.Location == location &&
+        //            x.MetricType == "Meter Reading" &&
+        //            x.Timestamp < startBoundary &&
+        //            x.Value != null)
+        //        .OrderByDescending(x => x.Timestamp)
+        //        .FirstOrDefaultAsync();
+
+        //    var endReading = await _context.ScadaHistoryPoints
+        //        .Where(x =>
+        //            x.Location == location &&
+        //            x.MetricType == "Meter Reading" &&
+        //            x.Timestamp < endBoundary &&
+        //            x.Value != null)
+        //        .OrderByDescending(x => x.Timestamp)
+        //        .FirstOrDefaultAsync();
+
+        //    if (startReading?.Value == null || endReading?.Value == null)
+        //    {
+        //        return 0;
+        //    }
+
+        //    var simpleDelta = endReading.Value.Value - startReading.Value.Value;
+
+        //    if (simpleDelta >= 0)
+        //    {
+        //        return simpleDelta;
+        //    }
+
+        //    var replacements = await _context.MeterReplacements
+        //        .Where(x =>
+        //            x.Location == location &&
+        //            x.ReplacementDate >= startReading.Timestamp.Date &&
+        //            x.ReplacementDate <= endReading.Timestamp.Date)
+        //        .OrderBy(x => x.ReplacementDate)
+        //        .ToListAsync();
+
+        //    if (!replacements.Any())
+        //    {
+        //        return 0;
+        //    }
+
+        //    decimal total = 0;
+        //    var previousReading = startReading.Value.Value;
+
+        //    foreach (var replacement in replacements)
+        //    {
+        //        var oldMeterUsage = replacement.OldMeterFinalReading - previousReading;
+
+        //        if (oldMeterUsage > 0)
+        //        {
+        //            total += oldMeterUsage;
+        //        }
+
+        //        previousReading = replacement.NewMeterStartingReading;
+        //    }
+
+        //    var finalNewMeterUsage = endReading.Value.Value - previousReading;
+
+        //    if (finalNewMeterUsage > 0)
+        //    {
+        //        total += finalNewMeterUsage;
+        //    }
+
+        //    return total;
+        //}
 
         private IActionResult ExportConsumptionWorkbook(
             List<ConsumptionReportDto> reports,
