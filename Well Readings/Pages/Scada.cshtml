@@ -41,6 +41,10 @@
         <button type="button" class="history-mode-btn" id="btnYearsToday" onclick="loadPumpedHistory('yearsToday')">
             Previous Years Today
         </button>
+
+        <button type="button" class="history-mode-btn" id="btnSameWeekday" onclick="loadPumpedHistory('sameWeekday')">
+            Same Weekday
+        </button>
     </div>
 
     <div id="pumpedHistoryStatus" class="history-status">
@@ -422,9 +426,11 @@
 
         const btn30 = document.getElementById("btn30Days");
         const btnYears = document.getElementById("btnYearsToday");
+        const btnSameWeekday = document.getElementById("btnSameWeekday");
 
         btn30.classList.toggle("active", mode === "30days");
         btnYears.classList.toggle("active", mode === "yearsToday");
+        btnSameWeekday.classList.toggle("active", mode === "sameWeekday");
 
         status.textContent = "Loading pumped history...";
         tableBody.innerHTML = "";
@@ -450,7 +456,9 @@
 
             if (mode === "30days") {
                 status.textContent = "Showing the previous 30 days plus today.";
-            } else {
+              } else if (mode === "sameWeekday") {
+                status.textContent = "Showing the previous 30 matching weekdays plus today.";
+              } else {
                 status.textContent = "Showing this same calendar date in previous years plus today.";
             }
 
@@ -552,9 +560,13 @@
         const todayText = formatGallons(stats.todayValue);
         const avgText = formatGallons(stats.average);
 
-        const comparisonText = mode === "yearsToday"
-            ? "same-date previous-years average"
-            : "previous 30-day average";
+        let comparisonText = "previous 30-day average";
+
+        if (mode === "yearsToday") {
+        comparisonText = "same-date previous-years average";
+        } else if (mode === "sameWeekday") {
+        comparisonText = "same-weekday average";
+        }
 
         if (percent >= 25) {
             warning.className = "history-warning history-warning-alert";
@@ -680,6 +692,8 @@
 
         if (mode === "yearsToday") {
             averageLabel.textContent = "Prior Years Avg.";
+        } else if (mode === "sameWeekday") {
+            averageLabel.textContent = "Same Weekday Avg.";
         } else {
             averageLabel.textContent = "Prior 30 Days Avg.";
         }

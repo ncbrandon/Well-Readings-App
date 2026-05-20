@@ -27,7 +27,8 @@ namespace Well_Readings.Pages
             "New",
             "Oakwood",
             "Ray",
-            "Filter Plant"
+            "Filter Plant",
+            "Mt.Jefferson"
         };
 
         public void OnGet()
@@ -40,6 +41,12 @@ namespace Well_Readings.Pages
             {
                 var yearsToday = await GetPreviousYearsTodayPumpedAsync();
                 return new JsonResult(yearsToday);
+            }
+
+            if (string.Equals(mode, "sameWeekday", StringComparison.OrdinalIgnoreCase))
+            {
+                var sameWeekday = await GetPreviousSameWeekdaysPumpedAsync();
+                return new JsonResult(sameWeekday);
             }
 
             var previous30Days = await GetPrevious30DaysPumpedAsync();
@@ -114,6 +121,53 @@ namespace Well_Readings.Pages
 
                 // Keep today even if the value is 0, because it helps show whether today's data exists yet.
                 // For prior years, skip dates with no pumped data.
+                if (!isToday && gallons <= 0)
+                {
+                    continue;
+                }
+
+                results.Add(new PumpedHistoryRowDto
+                {
+                    Date = date,
+                    DayName = date.ToString("dddd", CultureInfo.InvariantCulture),
+                    DisplayDate = date.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture),
+                    GallonsPumped = gallons,
+                    IsToday = isToday
+                });
+            }
+
+            return results
+                .OrderBy(x => x.Date)
+                .ToList();
+        }
+
+        private async Task<List<PumpedHistoryRowDto>> GetPreviousSameWeekdaysPumpedAsync()
+        {
+            var today = DateTime.Today;
+            var targetDayOfWeek = today.DayOfWeek;
+
+            var results = new List<PumpedHistoryRowDto>();
+
+            /*
+                This returns the previous 30 matching weekdays PLUS today.
+
+                Example:
+                If today is Wednesday, this returns the last 30 Wednesdays
+                and today's Wednesday.
+            */
+
+            for (var i = 30; i >= 0; i--)
+            {
+                var date = today.AddDays(-7 * i);
+
+                if (date.DayOfWeek != targetDayOfWeek)
+                {
+                    continue;
+                }
+
+                var gallons = await GetTotalGallonsPumpedForDateAsync(date);
+                var isToday = date.Date == today.Date;
+
                 if (!isToday && gallons <= 0)
                 {
                     continue;
