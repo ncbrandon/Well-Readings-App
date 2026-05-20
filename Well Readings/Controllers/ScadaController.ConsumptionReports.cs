@@ -339,7 +339,7 @@ namespace Well_Readings.Controllers
             string? notes,
             decimal? waterPumpedOverride)
         {
-            var billingDays = (currentReadDate.Date - lastReadDate.Date).Days + 1;
+            var billingDays = (currentReadDate.Date - lastReadDate.Date).Days;
 
             if (billingDays <= 0)
             {
