@@ -207,6 +207,37 @@
             max-width: 260px;
             font-size: 18px;
         }
+
+        .group-header.running {
+            background: #047857;
+            color: white;
+            border-bottom-color: #065f46;
+        }
+
+        .field-row.running-flash {
+            animation: flashGreenRow 1.2s infinite;
+            border-radius: 8px;
+            padding: 6px;
+        }
+
+        @@keyframes flashGreenRow {
+            0% {
+                background-color: #dcfce7;
+            }
+
+            50% {
+                background-color: #22c55e;
+            }
+
+            100% {
+                background-color: #dcfce7;
+            }
+        }
+
+        .field-row.running-flash label {
+            color: #064e3b;
+        }
+
     }
 </style>
 
@@ -444,23 +475,24 @@
 
         panel.style.display = "block";
 
-        if (site.groups) {
-            panel.innerHTML = `
-                <h2>${site.displayName}</h2>
+            if (site.groups) {
+        panel.innerHTML = `
+            <h2>${site.displayName}</h2>
 
-                ${site.groups.map((group, index) => `
-                    <div class="entry-group">
-                        <div class="group-header" onclick="toggleGroup('${site.name}-group-${index}')">
-                            ${group.title} ▼
-                        </div>
-
-                        <div class="group-body" id="${site.name}-group-${index}">
-                            ${group.fields.map(field => renderField(site, field)).join("")}
-                        </div>
+            ${site.groups.map((group, index) => `
+                <div class="entry-group">
+                    <div class="group-header ${getGroupHeaderClass(group.title)}" onclick="toggleGroup('${site.name}-group-${index}')">
+                        ${group.title} ▼
                     </div>
-                `).join("")}
-            `;
-        } else {
+
+                    <div class="group-body" id="${site.name}-group-${index}">
+                        ${group.fields.map(field => renderField(site, field)).join("")}
+                    </div>
+                </div>
+            `).join("")}
+        `;
+    }
+            else {
             panel.innerHTML = `
                 <h2>${site.displayName}</h2>
                 ${site.fields.map(field => renderField(site, field)).join("")}
@@ -468,12 +500,13 @@
         }
     }
 
-    function renderField(site, field) {
+        function renderField(site, field) {
         const key = keyFor(field);
         const savedValue = values[key] ?? "";
+        const runningClass = isFieldRunning(field) ? "running-flash" : "";
 
         return `
-            <div class="field-row">
+            <div class="field-row ${runningClass}">
                 <label>${field.label}</label>
                 <input
                     type="number"
@@ -489,6 +522,23 @@
             </div>
         `;
     }
+
+        function getGroupHeaderClass(groupTitle) {
+        if (groupTitle === "Filter 1" && runningStatuses["Filter 1"]) {
+            return "running";
+        }
+
+        if (groupTitle === "Filter 2" && runningStatuses["Filter 2"]) {
+            return "running";
+        }
+
+        return "";
+    }
+
+    function isFieldRunning(field) {
+        return field.location === "Mt. Jefferson" && runningStatuses["Mt. Jefferson"];
+    }
+
 
     function toggleGroup(id) {
         const group = document.getElementById(id);
@@ -532,7 +582,7 @@
         sites.forEach(site => markTileStatus(site.name));
     }
 
-    async function loadRunningStatuses() {
+        async function loadRunningStatuses() {
         const response = await fetch("/api/maintenance/site-statuses");
 
         if (!response.ok) return;
@@ -545,6 +595,10 @@
         });
 
         refreshAllTileStatuses();
+
+        if (currentSiteName) {
+            openSite(currentSiteName);
+        }
     }
 
     async function handleDateChange() {

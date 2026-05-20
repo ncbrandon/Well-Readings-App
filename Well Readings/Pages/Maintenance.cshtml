@@ -132,6 +132,52 @@
         margin-right: 8px;
         transform: scale(1.2);
     }
+
+    @@media (max-width: 700px) {
+        .site-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .site-tile {
+            padding: 12px 6px;
+            font-size: 13px;
+            min-height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-check-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .status-check {
+            padding: 10px 8px;
+            font-size: 13px;
+        }
+
+        .maintenance-status-section {
+            padding: 14px;
+        }
+
+        .maintenance-panel {
+            padding: 14px;
+        }
+
+        .date-row label {
+            display: block;
+            width: auto;
+            margin-bottom: 5px;
+        }
+
+        .date-row input {
+            width: 100%;
+            max-width: 260px;
+        }
+    }
+
 </style>
 
 <script>
@@ -157,7 +203,8 @@
         "Ray",
         "Filter 1",
         "Filter 2",
-        "Filter Plant"
+        "Filter Plant",
+        "Mt. Jefferson"
     ];
 
     const maintenanceState = {};

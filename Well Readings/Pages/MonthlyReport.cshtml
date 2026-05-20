@@ -89,11 +89,7 @@
         <input type="date" id="meterStartDate" />
 
         <label>Ending Date</label>
-
-        <div class="meter-ending-box">
-            <input type="date" id="meterEndDate" />
-            <div class="meter-warning">DAY AFTER METERS READ</div>
-        </div>
+        <input type="date" id="meterEndDate" />
 
         <button type="button" onclick="loadMeterTotalReport()">Run Total Report</button>
     </div>
@@ -426,15 +422,7 @@
         gap: 5px;
     }
 
-    .meter-warning {
-        color: #dc2626;
-        font-weight: bold;
-        font-size: 14px;
-        animation: flashWarning 1s infinite;
-        white-space: nowrap;
-        line-height: 1;
-    }
-
+    
     @@keyframes flashWarning {
         0% {
             opacity: 1;
