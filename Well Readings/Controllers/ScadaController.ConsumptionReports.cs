@@ -471,13 +471,18 @@ namespace Well_Readings.Controllers
         //}
 
         private IActionResult ExportConsumptionWorkbook(
-            List<ConsumptionReportDto> reports,
-            string fileName)
+    List<ConsumptionReportDto> reports,
+    string fileName)
         {
             using var workbook = new XLWorkbook();
 
             var summary = workbook.Worksheets.Add("Summary");
+            var charts = workbook.Worksheets.Add("Charts");
             var data = workbook.Worksheets.Add("Saved Reports");
+
+            // =========================
+            // Summary Sheet
+            // =========================
 
             summary.Cell("A1").Value = "Consumption Report Summary";
             summary.Range("A1:F1").Merge();
@@ -513,20 +518,154 @@ namespace Well_Readings.Controllers
             summary.Range("B4:B6").Style.NumberFormat.Format = "#,##0";
             summary.Cell("B7").Style.NumberFormat.Format = "0.00%";
 
+            // =========================
+            // Charts Sheet
+            // =========================
+
+            charts.Cell("A1").Value = "Consumption Charts";
+            charts.Range("A1:J1").Merge();
+            charts.Cell("A1").Style.Font.Bold = true;
+            charts.Cell("A1").Style.Font.FontSize = 16;
+            charts.Cell("A1").Style.Fill.BackgroundColor = XLColor.FromHtml("#1f2937");
+            charts.Cell("A1").Style.Font.FontColor = XLColor.White;
+            charts.Cell("A1").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            charts.Cell("A3").Value = "Period";
+            charts.Cell("B3").Value = "Water Pumped";
+            charts.Cell("C3").Value = "Water Consumed";
+            charts.Cell("D3").Value = "Unaccounted For";
+            charts.Cell("E3").Value = "Loss %";
+            charts.Cell("F3").Value = "Pumped Bar";
+            charts.Cell("G3").Value = "Consumed Bar";
+            charts.Cell("H3").Value = "Loss Bar";
+            charts.Cell("I3").Value = "Loss % Status";
+
+            charts.Range("A3:I3").Style.Font.Bold = true;
+            charts.Range("A3:I3").Style.Fill.BackgroundColor = XLColor.FromHtml("#dbeafe");
+            charts.Range("A3:I3").Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            charts.Range("A3:I3").Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            var maxGallons = reports.Any()
+                ? Math.Max(
+                    reports.Max(x => x.WaterPumped),
+                    Math.Max(reports.Max(x => x.WaterConsumed), reports.Max(x => x.WaterLoss)))
+                : 0;
+
+            if (maxGallons <= 0)
+            {
+                maxGallons = 1;
+            }
+
+            for (var i = 0; i < reports.Count; i++)
+            {
+                var report = reports[i];
+                var row = i + 4;
+
+                charts.Cell(row, 1).Value = report.PeriodLabel;
+                charts.Cell(row, 2).Value = report.WaterPumped;
+                charts.Cell(row, 3).Value = report.WaterConsumed;
+                charts.Cell(row, 4).Value = report.WaterLoss;
+                charts.Cell(row, 5).Value = report.LossPercent;
+
+                charts.Cell(row, 2).Style.NumberFormat.Format = "#,##0";
+                charts.Cell(row, 3).Style.NumberFormat.Format = "#,##0";
+                charts.Cell(row, 4).Style.NumberFormat.Format = "#,##0";
+                charts.Cell(row, 5).Style.NumberFormat.Format = "0.00%";
+
+                var pumpedBar = MakeTextBar(report.WaterPumped, maxGallons);
+                var consumedBar = MakeTextBar(report.WaterConsumed, maxGallons);
+                var lossBar = MakeTextBar(report.WaterLoss, maxGallons);
+
+                charts.Cell(row, 6).Value = pumpedBar;
+                charts.Cell(row, 7).Value = consumedBar;
+                charts.Cell(row, 8).Value = lossBar;
+
+                charts.Cell(row, 6).Style.Font.FontColor = XLColor.FromHtml("#2563eb");
+                charts.Cell(row, 7).Style.Font.FontColor = XLColor.FromHtml("#059669");
+
+                if (report.LossPercent >= 0.30m)
+                {
+                    charts.Cell(row, 8).Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+                    charts.Cell(row, 9).Value = "High";
+                    charts.Cell(row, 9).Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2");
+                    charts.Cell(row, 9).Style.Font.FontColor = XLColor.FromHtml("#991b1b");
+                }
+                else if (report.LossPercent >= 0.20m)
+                {
+                    charts.Cell(row, 8).Style.Font.FontColor = XLColor.FromHtml("#f59e0b");
+                    charts.Cell(row, 9).Value = "Watch";
+                    charts.Cell(row, 9).Style.Fill.BackgroundColor = XLColor.FromHtml("#fef3c7");
+                    charts.Cell(row, 9).Style.Font.FontColor = XLColor.FromHtml("#92400e");
+                }
+                else
+                {
+                    charts.Cell(row, 8).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+                    charts.Cell(row, 9).Value = "OK";
+                    charts.Cell(row, 9).Style.Fill.BackgroundColor = XLColor.FromHtml("#dcfce7");
+                    charts.Cell(row, 9).Style.Font.FontColor = XLColor.FromHtml("#166534");
+                }
+
+                charts.Cell(row, 9).Style.Font.Bold = true;
+                charts.Cell(row, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+
+            var lastChartRow = reports.Count + 3;
+
+            if (reports.Count > 0)
+            {
+                charts.Range(3, 1, lastChartRow, 9).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                charts.Range(3, 1, lastChartRow, 9).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            charts.Cell("A" + (lastChartRow + 3)).Value = "Legend";
+            charts.Cell("A" + (lastChartRow + 3)).Style.Font.Bold = true;
+
+            charts.Cell("A" + (lastChartRow + 4)).Value = "Blue";
+            charts.Cell("B" + (lastChartRow + 4)).Value = "Water Pumped";
+
+            charts.Cell("A" + (lastChartRow + 5)).Value = "Green";
+            charts.Cell("B" + (lastChartRow + 5)).Value = "Water Consumed";
+
+            charts.Cell("A" + (lastChartRow + 6)).Value = "Gray / Orange / Red";
+            charts.Cell("B" + (lastChartRow + 6)).Value = "Unaccounted-for water / Loss";
+
+            charts.Cell("A" + (lastChartRow + 8)).Value = "Loss % Thresholds";
+            charts.Cell("A" + (lastChartRow + 8)).Style.Font.Bold = true;
+
+            charts.Cell("A" + (lastChartRow + 9)).Value = "OK";
+            charts.Cell("B" + (lastChartRow + 9)).Value = "Under 20%";
+
+            charts.Cell("A" + (lastChartRow + 10)).Value = "Watch";
+            charts.Cell("B" + (lastChartRow + 10)).Value = "20% to 29.99%";
+
+            charts.Cell("A" + (lastChartRow + 11)).Value = "High";
+            charts.Cell("B" + (lastChartRow + 11)).Value = "30% or higher";
+
+            charts.Columns("A:I").AdjustToContents();
+            charts.Column("F").Width = 35;
+            charts.Column("G").Width = 35;
+            charts.Column("H").Width = 35;
+
+            charts.SheetView.FreezeRows(3);
+
+            // =========================
+            // Saved Reports Sheet
+            // =========================
+
             var headers = new[]
             {
-                "Period Label",
-                "Last Read Date",
-                "Current Read Date",
-                "Billing Days",
-                "Water Pumped",
-                "Water Consumed",
-                "Unaccounted For",
-                "Loss %",
-                "Pumped Avg/Day",
-                "Consumed Avg/Day",
-                "Notes"
-            };
+        "Period Label",
+        "Last Read Date",
+        "Current Read Date",
+        "Billing Days",
+        "Water Pumped",
+        "Water Consumed",
+        "Unaccounted For",
+        "Loss %",
+        "Pumped Avg/Day",
+        "Consumed Avg/Day",
+        "Notes"
+    };
 
             for (var i = 0; i < headers.Length; i++)
             {
@@ -573,6 +712,30 @@ namespace Well_Readings.Controllers
                 stream.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 fileName);
+        }
+
+        private static string MakeTextBar(decimal value, decimal maxValue)
+        {
+            if (value <= 0 || maxValue <= 0)
+            {
+                return "";
+            }
+
+            const int maxBlocks = 25;
+
+            var blocks = (int)Math.Round((value / maxValue) * maxBlocks);
+
+            if (blocks < 1)
+            {
+                blocks = 1;
+            }
+
+            if (blocks > maxBlocks)
+            {
+                blocks = maxBlocks;
+            }
+
+            return new string('█', blocks);
         }
 
         public class SaveConsumptionReportRequest

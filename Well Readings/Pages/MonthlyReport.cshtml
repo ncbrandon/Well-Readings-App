@@ -1336,49 +1336,151 @@
             renderConsumptionHistoryChart(rows);
         }
 
-        function renderConsumptionHistoryChart(rows) {
+                function renderConsumptionHistoryChart(rows) {
             const ctx = document.getElementById("consumptionHistoryChart");
 
             if (consumptionHistoryChart) {
                 consumptionHistoryChart.destroy();
             }
 
+            const labels = rows.map(x => x.periodLabel);
+
             consumptionHistoryChart = new Chart(ctx, {
-                type: "line",
                 data: {
-                    labels: rows.map(x => x.periodLabel),
+                    labels: labels,
                     datasets: [
                         {
+                            type: "bar",
                             label: "Water Pumped",
                             data: rows.map(x => x.waterPumped),
-                            borderColor: "#2563eb",
                             backgroundColor: "#2563eb",
-                            tension: 0.2
+                            borderColor: "#1d4ed8",
+                            borderWidth: 1,
+                            yAxisID: "y"
                         },
                         {
+                            type: "bar",
                             label: "Water Consumed",
                             data: rows.map(x => x.waterConsumed),
-                            borderColor: "#059669",
                             backgroundColor: "#059669",
-                            tension: 0.2
+                            borderColor: "#047857",
+                            borderWidth: 1,
+                            yAxisID: "y"
                         },
                         {
+                            type: "bar",
                             label: "Unaccounted For",
                             data: rows.map(x => x.waterLoss),
-                            borderColor: "#dc2626",
-                            backgroundColor: "#dc2626",
-                            tension: 0.2
+                            backgroundColor: rows.map(x => {
+                                const lossPercent = Number(x.lossPercent || 0);
+
+                                if (lossPercent >= 0.30) {
+                                    return "#dc2626";
+                                }
+
+                                if (lossPercent >= 0.20) {
+                                    return "#f59e0b";
+                                }
+
+                                return "#64748b";
+                            }),
+                            borderColor: "#334155",
+                            borderWidth: 1,
+                            yAxisID: "y"
+                        },
+                        {
+                            type: "line",
+                            label: "Loss %",
+                            data: rows.map(x => Number(x.lossPercent || 0) * 100),
+                            borderColor: "#991b1b",
+                            backgroundColor: "#991b1b",
+                            borderWidth: 3,
+                            tension: 0.25,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            yAxisID: "y1"
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: "index",
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: "top",
+                            labels: {
+                                color: "#111827",
+                                font: {
+                                    weight: "bold"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    if (context.dataset.label === "Loss %") {
+                                        return `Loss %: ${Number(context.raw).toFixed(2)}%`;
+                                    }
+
+                                    return `${context.dataset.label}: ${formatNumber(context.raw)} gallons`;
+                                }
+                            }
+                        }
+                    },
                     scales: {
+                        x: {
+                            ticks: {
+                                color: "#111827",
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    weight: "bold"
+                                }
+                            },
+                            grid: {
+                                color: "rgba(0,0,0,0.08)"
+                            }
+                        },
                         y: {
                             beginAtZero: true,
+                            position: "left",
+                            title: {
+                                display: true,
+                                text: "Gallons",
+                                color: "#111827",
+                                font: {
+                                    weight: "bold"
+                                }
+                            },
                             ticks: {
+                                color: "#111827",
                                 callback: value => Number(value).toLocaleString()
+                            },
+                            grid: {
+                                color: "rgba(0,0,0,0.08)"
+                            }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            position: "right",
+                            title: {
+                                display: true,
+                                text: "Loss %",
+                                color: "#991b1b",
+                                font: {
+                                    weight: "bold"
+                                }
+                            },
+                            ticks: {
+                                color: "#991b1b",
+                                callback: value => Number(value).toFixed(0) + "%"
+                            },
+                            grid: {
+                                drawOnChartArea: false
                             }
                         }
                     }
