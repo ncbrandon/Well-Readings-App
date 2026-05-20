@@ -3,8 +3,16 @@
 
 <h1>Monthly Reports</h1>
 
-<section class="report-card">
-    <h2>Site Monthly Report</h2>
+<section class="report-card report-section is-open" id="siteMonthlyReportSection">
+    <button type="button" class="report-section-header" onclick="toggleReportSection('siteMonthlyReportSection')">
+        <span class="report-section-title">
+            <span>Site Monthly Report</span>
+            <span class="report-section-subtitle">Daily gallons, chemistry, and site summary</span>
+        </span>
+        <span class="report-section-arrow">⌄</span>
+    </button>
+
+    <div class="report-section-content">
 
     <div class="filter-row">
         <label>Site</label>
@@ -62,10 +70,19 @@
         </thead>
         <tbody id="summaryBody"></tbody>
     </table>
+    </div>
 </section>
 
-<section class="report-card">
-    <h2>Meter Reading Report</h2>
+<section class="report-card report-section" id="meterReadingReportSection">
+    <button type="button" class="report-section-header" onclick="toggleReportSection('meterReadingReportSection')">
+        <span class="report-section-title">
+            <span>Meter Reading Report</span>
+            <span class="report-section-subtitle">Total gallons pumped for a selected date range</span>
+        </span>
+        <span class="report-section-arrow">⌄</span>
+    </button>
+
+    <div class="report-section-content">
 
     <div class="meter-filter-row">
         <label>Beginning Date</label>
@@ -85,10 +102,19 @@
         Total Gallons Pumped:
         <span id="totalGallons">0</span>
     </div>
+    </div>
 </section>
 
-<section class="report-card consumption-card">
-    <h2>Consumption Report</h2>
+<section class="report-card consumption-card report-section" id="consumptionReportSection">
+    <button type="button" class="report-section-header" onclick="toggleReportSection('consumptionReportSection')">
+        <span class="report-section-title">
+            <span>Consumption Report</span>
+            <span class="report-section-subtitle">Compare pumped water to customer meter consumption</span>
+        </span>
+        <span class="report-section-arrow">⌄</span>
+    </button>
+
+    <div class="report-section-content">
 
     <p class="help-text">
         Compare customer meter consumption against total water pumped between meter reading dates.
@@ -223,13 +249,20 @@
         </thead>
         <tbody id="consumptionHistoryBody"></tbody>
     </table>
+    </div>
 </section>
 
-<section class="report-card">
-    <h2>Pump Station Report</h2>
 
-<section class="report-card">
-    <h2>Pump Station Report</h2>
+<section class="report-card report-section" id="pumpStationReportSection">
+    <button type="button" class="report-section-header" onclick="toggleReportSection('pumpStationReportSection')">
+        <span class="report-section-title">
+            <span>Pump Station Report</span>
+            <span class="report-section-subtitle">Pump run hours and entered pump station readings</span>
+        </span>
+        <span class="report-section-arrow">⌄</span>
+    </button>
+
+    <div class="report-section-content">
 
     <div class="filter-row">
         <label>Pump Station</label>
@@ -261,10 +294,19 @@
         </thead>
         <tbody id="pumpStationReportBody"></tbody>
     </table>
+    </div>
 </section>
 
-<section class="report-card">
-    <h2>NC MOR Autofill Report</h2>
+<section class="report-card report-section" id="ncMorReportSection">
+    <button type="button" class="report-section-header" onclick="toggleReportSection('ncMorReportSection')">
+        <span class="report-section-title">
+            <span>NC MOR Autofill Report</span>
+            <span class="report-section-subtitle">Generate report data for the state MOR form</span>
+        </span>
+        <span class="report-section-arrow">⌄</span>
+    </button>
+
+    <div class="report-section-content">
 
     <div class="filter-row">
         <label>Site</label>
@@ -295,6 +337,7 @@
     </p>
 
     <textarea id="ncMorScript" class="script-box"></textarea>
+    </div>
 </section>
 
 <style>
@@ -728,9 +771,63 @@
             cursor: pointer;
         }
 
-            .delete-consumption-btn:hover {
-                background: #991b1b;
+        .delete-consumption-btn:hover {
+            background: #991b1b;
+        }
+
+        .report-section {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .report-section-header {
+            width: 100%;
+            border: none;
+            background: #1f2937;
+            color: white;
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 1.25rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .report-section-header:hover {
+                background: #111827;
             }
+
+        .report-section-title {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .report-section-subtitle {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #d1d5db;
+        }
+
+        .report-section-arrow {
+            font-size: 1.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        .report-section-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .report-section.is-open .report-section-content {
+            display: block;
+        }
+
+        .report-section.is-open .report-section-arrow {
+            transform: rotate(180deg);
+        }
 
 </style>
 
@@ -739,6 +836,19 @@
 <script>
         setDefaultDates();
 
+        function toggleReportSection(sectionId) {
+            const selected = document.getElementById(sectionId);
+            const allSections = document.querySelectorAll(".report-section");
+
+            allSections.forEach(section => {
+                if (section.id === sectionId) {
+                    section.classList.toggle("is-open");
+                } else {
+                    section.classList.remove("is-open");
+                }
+            });
+        }
+        
         function setDefaultDates() {
             const today = new Date();
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
