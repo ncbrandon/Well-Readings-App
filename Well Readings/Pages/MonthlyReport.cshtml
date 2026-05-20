@@ -218,6 +218,7 @@
                 <th>Loss</th>
                 <th>Loss %</th>
                 <th>Notes</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody id="consumptionHistoryBody"></tbody>
@@ -716,6 +717,20 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .delete-consumption-btn {
+            padding: 6px 10px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+            .delete-consumption-btn:hover {
+                background: #991b1b;
+            }
 
 </style>
 
@@ -1305,12 +1320,12 @@
             renderConsumptionHistory(rows);
         }
 
-        function renderConsumptionHistory(rows) {
+                function renderConsumptionHistory(rows) {
             const body = document.getElementById("consumptionHistoryBody");
             body.innerHTML = "";
 
             if (!rows || rows.length === 0) {
-                body.innerHTML = `<tr><td colspan="9">No saved consumption reports found.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="10">No saved consumption reports found.</td></tr>`;
                 renderConsumptionHistoryChart([]);
                 return;
             }
@@ -1328,6 +1343,11 @@
                     <td>${formatNumber(row.waterLoss)}</td>
                     <td>${formatPercent(row.lossPercent)}</td>
                     <td>${row.notes ?? ""}</td>
+                    <td>
+                        <button type="button" class="delete-consumption-btn" onclick="deleteConsumptionReport('${row.id}')">
+                            Delete
+                        </button>
+                    </td>
                 `;
 
                 body.appendChild(tr);
@@ -1486,6 +1506,31 @@
                     }
                 }
             });
+        }
+
+                async function deleteConsumptionReport(id) {
+            if (!id) {
+                alert("Missing report ID.");
+                return;
+            }
+
+            const confirmed = confirm("Delete this saved consumption report? This cannot be undone.");
+
+            if (!confirmed) {
+                return;
+            }
+
+            const response = await fetch(`/api/scada/consumption-report/${id}`, {
+                method: "DELETE"
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                alert("Delete failed:\n" + errorText);
+                return;
+            }
+
+            await loadConsumptionHistory();
         }
 
         function exportConsumptionHistory() {

@@ -29,6 +29,27 @@ namespace Well_Readings.Controllers
             return Ok(report);
         }
 
+        [HttpDelete("consumption-report/{id:guid}")]
+        public async Task<IActionResult> DeleteConsumptionReport(Guid id)
+        {
+            var existing = await _context.ConsumptionReports
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (existing == null)
+            {
+                return NotFound("Consumption report was not found.");
+            }
+
+            _context.ConsumptionReports.Remove(existing);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                deleted = true,
+                id
+            });
+        }
+
         [HttpPost("consumption-report/save")]
         public async Task<IActionResult> SaveConsumptionReport([FromBody] SaveConsumptionReportRequest request)
         {
