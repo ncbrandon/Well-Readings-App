@@ -447,48 +447,37 @@ namespace Well_Readings.Controllers
 
                 foreach (var meter in config.Meters)
                 {
-                    var meterPoints = points
-                        .Where(x => x.Location == meter.Location && x.MetricType == meter.MetricType)
-                        .OrderBy(x => x.Timestamp)
-                        .ToList();
-
                     var dailyRows = new List<(DateTime Date, decimal Gallons)>();
 
-                    foreach (var current in meterPoints.Where(x =>
-                        x.Timestamp.Date >= startDate.Date &&
-                        x.Timestamp.Date <= endDate.Date))
+                    for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
                     {
-                        var previous = meterPoints
-                            .Where(x => x.Timestamp < current.Timestamp)
-                            .OrderByDescending(x => x.Timestamp)
-                            .FirstOrDefault();
+                        var gallons = await GetDeltaForDate(meter.Location, meter.MetricType, date);
 
-                        if (previous == null || current.Value == null || previous.Value == null)
+                        if (gallons <= 0)
+                        {
                             continue;
+                        }
 
-                        var gallons = current.Value.Value - previous.Value.Value;
+                        dailyRows.Add((date, gallons));
 
-                        if (gallons < 0)
-                            gallons = 0;
+                        if (!siteDailyTotals.ContainsKey(date))
+                        {
+                            siteDailyTotals[date] = 0;
+                        }
 
-                        dailyRows.Add((current.Timestamp.Date, gallons));
-
-                        if (!siteDailyTotals.ContainsKey(current.Timestamp.Date))
-                            siteDailyTotals[current.Timestamp.Date] = 0;
-
-                        siteDailyTotals[current.Timestamp.Date] += gallons;
+                        siteDailyTotals[date] += gallons;
 
                         rows.Add(new
                         {
-                            date = current.Timestamp,
+                            date,
                             site = selectedSite,
                             name = meter.DisplayName,
                             gallonsPumped = gallons,
-                            chlorine = GetDailyValue(points, config.ChemistryLocations, "Chlorine", current.Timestamp.Date),
-                            phosphate = GetDailyValue(points, config.ChemistryLocations, "Phosphate", current.Timestamp.Date),
-                            ph = GetDailyValue(points, config.ChemistryLocations, "pH", current.Timestamp.Date),
-                            temperature = selectedSite == "Filter Plant"
-                                ? GetDailyValue(points, config.ChemistryLocations, "Temperature", current.Timestamp.Date)
+                            chlorine = GetDailyValue(points, config.ChemistryLocations, "Chlorine", date),
+                            phosphate = GetDailyValue(points, config.ChemistryLocations, "Phosphate", date),
+                            ph = GetDailyValue(points, config.ChemistryLocations, "pH", date),
+                            temperature = selectedSite == "Filter Plant" || selectedSite == "Mt. Jefferson"
+                                ? GetDailyValue(points, config.ChemistryLocations, "Temperature", date)
                                 : null
                         });
                     }
@@ -528,47 +517,41 @@ namespace Well_Readings.Controllers
         [HttpGet("meter-reading-total-report")]
         public async Task<IActionResult> GetMeterReadingTotalReport(DateTime startDate, DateTime endDate)
         {
-            endDate = endDate.Date.AddDays(1).AddTicks(-1);
-
             var validLocations = await _context.ValidMeterLocations
                 .Select(x => x.Location)
                 .ToListAsync();
 
-            var points = await _context.ScadaHistoryPoints
-                .Where(x =>
-                    x.MetricType == "Meter Reading" &&
-                    validLocations.Contains(x.Location) &&
-                    x.Timestamp <= endDate)
-                .OrderBy(x => x.Timestamp)
-                .ToListAsync();
-
             decimal totalGallons = 0;
+            var siteTotals = new List<object>();
 
-            var grouped = points
-                .Where(x => x.Timestamp.Date >= startDate.Date && x.Timestamp.Date <= endDate.Date)
-                .GroupBy(x => x.Location);
-
-            foreach (var group in grouped)
+            foreach (var location in validLocations)
             {
-                var values = group
-                    .Where(x => x.Value.HasValue)
-                    .Select(x => x.Value!.Value)
-                    .ToList();
+                decimal locationTotal = 0;
 
-                if (values.Count < 2)
-                    continue;
+                for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
+                {
+                    var gallons = await GetDeltaForDate(location, "Meter Reading", date);
+                    locationTotal += gallons;
+                }
 
-                var gallons = values.Max() - values.Min();
+                if (locationTotal > 0)
+                {
+                    siteTotals.Add(new
+                    {
+                        location,
+                        gallonsPumped = locationTotal
+                    });
+                }
 
-                if (gallons > 0)
-                    totalGallons += gallons;
+                totalGallons += locationTotal;
             }
 
             return Ok(new
             {
-                startDate,
-                endDate,
-                totalGallonsPumped = totalGallons
+                startDate = startDate.Date,
+                endDate = endDate.Date,
+                totalGallonsPumped = totalGallons,
+                siteTotals
             });
         }
 
@@ -948,6 +931,16 @@ namespace Well_Readings.Controllers
                     Meters = new List<MonthlyReportMeterConfig>
                     {
                         new MonthlyReportMeterConfig { DisplayName = "Ray", Location = "Ray", MetricType = "Meter Reading" }
+                    }
+                },
+
+                ["Mt. Jefferson"] = new MonthlyReportSiteConfig
+                {
+                    // Mt. Jefferson is a common header, so use Filter Plant chemistry readings.
+                    ChemistryLocations = new List<string> { "Filter Plant" },
+                    Meters = new List<MonthlyReportMeterConfig>
+                    {
+                        new MonthlyReportMeterConfig{DisplayName = "Mt. Jefferson", Location = "Mt. Jefferson", MetricType = "Meter Reading"}
                     }
                 },
 
