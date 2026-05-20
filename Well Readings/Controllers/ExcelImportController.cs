@@ -343,16 +343,34 @@ namespace Well_Readings.Controllers
             value = default;
 
             if (cell.IsEmpty())
-                return false;
-
-            if (cell.DataType == XLDataType.DateTime)
             {
-                value = cell.GetDateTime();
+                return false;
+            }
+
+            if (cell.TryGetValue<DateTime>(out value))
+            {
                 return true;
             }
 
-            if (DateTime.TryParse(cell.GetString(), out value))
+            if (cell.TryGetValue<double>(out var serialDate))
+            {
+                try
+                {
+                    value = DateTime.FromOADate(serialDate);
+                    return true;
+                }
+                catch
+                {
+                    // Fall through and try text parsing below.
+                }
+            }
+
+            var text = cell.GetString().Trim();
+
+            if (DateTime.TryParse(text, out value))
+            {
                 return true;
+            }
 
             return false;
         }

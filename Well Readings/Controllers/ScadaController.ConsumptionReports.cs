@@ -198,8 +198,8 @@ namespace Well_Readings.Controllers
                     var waterPumpedOverrideCell = worksheet.Cell(row, 5);
                     var notes = worksheet.Cell(row, 6).GetString().Trim();
 
-                    if (!lastReadDateCell.TryGetValue<DateTime>(out var lastReadDate) ||
-                        !currentReadDateCell.TryGetValue<DateTime>(out var currentReadDate))
+                    if (!TryGetExcelDate(lastReadDateCell, out var lastReadDate) ||
+                        !TryGetExcelDate(currentReadDateCell, out var currentReadDate))
                     {
                         skipped++;
                         errors.Add($"Row {row}: Missing or invalid dates.");
@@ -351,6 +351,43 @@ namespace Well_Readings.Controllers
                 : "Consumption_History.xlsx";
 
             return ExportConsumptionWorkbook(reports, fileName);
+        }
+
+        private static bool TryGetExcelDate(IXLCell cell, out DateTime value)
+        {
+            value = default;
+
+            if (cell.IsEmpty())
+            {
+                return false;
+            }
+
+            if (cell.TryGetValue<DateTime>(out value))
+            {
+                return true;
+            }
+
+            if (cell.TryGetValue<double>(out var serialDate))
+            {
+                try
+                {
+                    value = DateTime.FromOADate(serialDate);
+                    return true;
+                }
+                catch
+                {
+                    // Fall through and try text parsing below.
+                }
+            }
+
+            var text = cell.GetString().Trim();
+
+            if (DateTime.TryParse(text, out value))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private async Task<ConsumptionReportDto> BuildConsumptionReportAsync(
