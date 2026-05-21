@@ -2,12 +2,16 @@
 @model Well_Readings.Pages.DailyEntriesModel
 
 <h1>Daily Entry Log</h1>
+<p class="page-subtitle">
+    View, edit, or delete saved daily SCADA entries.
+</p>
 
-<button type="button" class="delete-btn" onclick="deleteSelectedEntries()">
+<button type="button" class="btn btn-danger" onclick="deleteSelectedEntries()">
     Delete Selected
 </button>
 
-<table class="entry-table">
+<div class="table-card">
+    <table class="entry-table">
     <thead>
         <tr>
             <th>Select</th>
@@ -16,22 +20,13 @@
         </tr>
     </thead>
     <tbody id="entriesBody"></tbody>
-</table>
+    </table>
+</div>
 
 <div id="message"></div>
 
 <style>
-    .delete-btn {
-        background: #dc2626;
-        color: white;
-        padding: 10px 18px;
-        border: none;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        margin-bottom: 15px;
-    }
-
+    
     .entry-table {
         width: 100%;
         border-collapse: collapse;

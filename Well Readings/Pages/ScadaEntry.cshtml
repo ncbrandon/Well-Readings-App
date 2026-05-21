@@ -1,12 +1,15 @@
 @page
 @model Well_Readings.Pages.ScadaEntryModel
 
-<h1>Daily SCADA Entry</h1>
+<h1>Daily Entry</h1>
+<p class="page-subtitle">
+    Enter readings for wells, filter plant readings, and pump stations.
+</p>
 
 <div class="entry-header">
     <label>Entry Date:</label>
     <input type="date" id="entryDate" onchange="handleDateChange()" />
-    <button type="button" class="load-btn" onclick="handleDateChange()">Load Date</button>
+    <button type="button" class="btn btn-secondary" onclick="handleDateChange()">Load Date</button>
 </div>
 
 <div id="draftNotice" class="draft-notice" style="display:none;">
@@ -21,7 +24,7 @@
 
 <div id="entryPanel" class="entry-panel" style="display:none;"></div>
 
-<button type="button" class="submit-btn" onclick="submitReadings()">Submit / Update Readings</button>
+<button type="button" cla<button type="button" class="btn btn-primary" onclick="submitReadings()">Submit / Update Readings</button>ss="submit-btn" onclick="submitReadings()">Submit / Update Readings</button>
 
 <div id="message"></div>
 

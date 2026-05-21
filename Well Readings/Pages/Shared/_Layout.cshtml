@@ -13,9 +13,9 @@
 
         <nav class="desktop-nav">
             <a href="/Scada">Home</a>
-            <a href="/ScadaEntry">Daily</a>
+            <a href="/ScadaEntry">Enter Readings</a>
             <a href="/Maintenance">Maintenance</a>
-            <a href="/DailyEntry">Log</a>
+            <a href="/DailyEntry">Entry Log</a>
             <a href="/MonthlyReport">Reports</a>
             <a href="/ExcelImport">Import</a>
             <a href="/DistributionPoints">Distribution</a>
@@ -25,12 +25,13 @@
         <div class="mobile-nav">
             <select onchange="if (this.value) window.location.href = this.value;">
                 <option value="">Menu</option>
-                <option value="/Scada">Home</option>
-                <option value="/ScadaEntry">Daily</option>
-                <option value="/Maintenance">Maintenance</option>
-                <option value="/DailyEntry">Log</option>
-                <option value="/MonthlyReport">Reports</option>
-                <option value="/DistributionPoints">Distribution</option>
+                <a href="/Scada">Home</a>
+                <a href="/ScadaEntry">Enter Readings</a>
+                <a href="/Maintenance">Maintenance</a>
+                <a href="/DailyEntry">Entry Log</a>
+                <a href="/MonthlyReport">Reports</a>
+                <a href="/ExcelImport">Import</a>
+                <a href="/DistributionPoints">Distribution</a>
                 
            
             </select>
@@ -40,6 +41,28 @@
     <main class="container">
         @RenderBody()
     </main>
+
+    <script>
+        const currentPath = window.location.pathname.toLowerCase();
+
+        document.querySelectorAll(".desktop-nav a").forEach(link => {
+            const linkPath = link.getAttribute("href").toLowerCase();
+
+            if (linkPath === currentPath) {
+                link.classList.add("active");
+            }
+        });
+
+        const mobileMenu = document.querySelector(".mobile-nav select");
+
+        if (mobileMenu) {
+            Array.from(mobileMenu.options).forEach(option => {
+                if (option.value && option.value.toLowerCase() === currentPath) {
+                    mobileMenu.value = option.value;
+                }
+            });
+        }
+    </script>
 
     @RenderSection("Scripts", required: false)
 </body>

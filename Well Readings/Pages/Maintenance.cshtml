@@ -2,6 +2,9 @@
 @model Well_Readings.Pages.MaintenanceModel
 
 <h1>Maintenance</h1>
+<p class="page-subtitle">
+    Mark running sites, track supplies needed, and record pump install dates.
+</p>
 
 <section class="maintenance-status-section">
     <h2>Site Running Status</h2>
@@ -88,18 +91,7 @@
         border-radius: 5px;
     }
 
-    .save-btn {
-        padding: 10px 20px;
-        font-size: 15px;
-        font-weight: bold;
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        margin-top: 15px;
-    }
-
+    
     #message {
         margin-top: 20px;
         font-weight: bold;
@@ -389,18 +381,18 @@
                 <input type="date" id="wellPumpDate-${safeId(site)}" />
             </div>
 
-            <button type="button" class="save-btn" onclick="savePumpInstall('${site}', 'New Well Pump', 'wellPumpDate-${safeId(site)}')">
-                Save New Well Pump Install
-            </button>
+                <button type="button" class="btn btn-primary" onclick="savePumpInstall('${site}', 'New Well Pump', 'wellPumpDate-${safeId(site)}')">
+        Save New Well Pump Install
+    </button>
 
             <div class="date-row" style="margin-top:20px;">
                 <label>New Detention Pump Installed:</label>
                 <input type="date" id="detentionPumpDate-${safeId(site)}" />
             </div>
 
-            <button type="button" class="save-btn" onclick="savePumpInstall('${site}', 'New Detention Pump', 'detentionPumpDate-${safeId(site)}')">
-                Save New Detention Pump Install
-            </button>
+                <button type="button" class="btn btn-primary" onclick="savePumpInstall('${site}', 'New Detention Pump', 'detentionPumpDate-${safeId(site)}')">
+        Save New Detention Pump Install
+    </button>
         `;
     }
 
