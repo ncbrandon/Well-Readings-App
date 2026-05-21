@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Water Dashboard</title>
-    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 
 <body>
@@ -12,28 +12,25 @@
         <div class="app-title">💧 Water Dashboard</div>
 
         <nav class="desktop-nav">
-            <a href="/Scada">Home</a>
+            <a href="/Scada">Dashboard</a>
             <a href="/ScadaEntry">Enter Readings</a>
             <a href="/Maintenance">Maintenance</a>
             <a href="/DailyEntry">Entry Log</a>
             <a href="/MonthlyReport">Reports</a>
-            <a href="/ExcelImport">Import</a>
+            <a href="/ExcelImport">Import SCADA</a>
             <a href="/DistributionPoints">Distribution</a>
-                        
         </nav>
 
         <div class="mobile-nav">
             <select onchange="if (this.value) window.location.href = this.value;">
                 <option value="">Menu</option>
-                <a href="/Scada">Home</a>
-                <a href="/ScadaEntry">Enter Readings</a>
-                <a href="/Maintenance">Maintenance</a>
-                <a href="/DailyEntry">Entry Log</a>
-                <a href="/MonthlyReport">Reports</a>
-                <a href="/ExcelImport">Import</a>
-                <a href="/DistributionPoints">Distribution</a>
-                
-           
+                <option value="/Scada">Dashboard</option>
+                <option value="/ScadaEntry">Enter Readings</option>
+                <option value="/Maintenance">Maintenance</option>
+                <option value="/DailyEntry">Entry Log</option>
+                <option value="/MonthlyReport">Reports</option>
+                <option value="/ExcelImport">Import SCADA</option>
+                <option value="/DistributionPoints">Distribution</option>
             </select>
         </div>
     </header>
