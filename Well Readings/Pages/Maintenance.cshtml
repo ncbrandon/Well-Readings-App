@@ -133,6 +133,62 @@
         transform: scale(1.2);
     }
 
+    .group-header.running {
+        background: #047857;
+        color: white;
+        border-bottom-color: #065f46;
+    }
+
+    .group-header.running-flash-header {
+        animation: flashGreenHeader 1.2s infinite;
+        color: white;
+        border-bottom-color: #065f46;
+    }
+
+    .field-row.running-flash {
+        animation: flashGreenRow 1.2s infinite;
+        border-radius: 8px;
+        padding: 6px;
+    }
+
+        .field-row.running-flash label {
+            color: #064e3b;
+        }
+
+    @keyframes flashGreenHeader {
+        0%
+
+    {
+        background-color: #047857;
+    }
+
+    50% {
+        background-color: #22c55e;
+    }
+
+    100% {
+        background-color: #047857;
+    }
+
+    }
+
+    @keyframes flashGreenRow {
+        0%
+
+    {
+        background-color: #dcfce7;
+    }
+
+    50% {
+        background-color: #22c55e;
+    }
+
+    100% {
+        background-color: #dcfce7;
+    }
+
+    }
+
     @@media (max-width: 700px) {
         .site-grid {
             grid-template-columns: repeat(4, 1fr);
@@ -203,7 +259,6 @@
         "Ray",
         "Filter 1",
         "Filter 2",
-        "Filter Plant",
         "Mt. Jefferson"
     ];
 

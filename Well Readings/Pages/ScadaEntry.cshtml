@@ -181,6 +181,36 @@
         color: #111827;
     }
 
+    .group-header.running {
+        background: #047857;
+        color: white;
+        border-bottom-color: #065f46;
+    }
+
+    .field-row.running-flash {
+        animation: flashGreenRow 1.2s infinite;
+        border-radius: 8px;
+        padding: 6px;
+    }
+
+    @@keyframes flashGreenRow {
+        0% {
+            background-color: #dcfce7;
+        }
+
+        50% {
+            background-color: #22c55e;
+        }
+
+        100% {
+            background-color: #dcfce7;
+        }
+    }
+
+    .field-row.running-flash label {
+        color: #064e3b;
+    }
+
     @@media (max-width: 700px) {
         .site-grid {
             grid-template-columns: repeat(4, 1fr);
@@ -208,36 +238,7 @@
             font-size: 18px;
         }
 
-        .group-header.running {
-            background: #047857;
-            color: white;
-            border-bottom-color: #065f46;
-        }
-
-        .field-row.running-flash {
-            animation: flashGreenRow 1.2s infinite;
-            border-radius: 8px;
-            padding: 6px;
-        }
-
-        @@keyframes flashGreenRow {
-            0% {
-                background-color: #dcfce7;
-            }
-
-            50% {
-                background-color: #22c55e;
-            }
-
-            100% {
-                background-color: #dcfce7;
-            }
-        }
-
-        .field-row.running-flash label {
-            color: #064e3b;
-        }
-
+        
     }
 </style>
 
@@ -530,6 +531,10 @@
 
         if (groupTitle === "Filter 2" && runningStatuses["Filter 2"]) {
             return "running";
+        }
+
+        if (groupTitle === "Plant Readings" && runningStatuses["Mt. Jefferson"]) {
+        return "running-flash-header";
         }
 
         return "";
