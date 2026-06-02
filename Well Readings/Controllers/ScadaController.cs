@@ -451,12 +451,15 @@ namespace Well_Readings.Controllers
 
                     for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
                     {
-                        var gallons = await GetDeltaForDate(meter.Location, meter.MetricType, date);
+                        var dailyResult = await GetDeltaForDateWithTimestamp(meter.Location, meter.MetricType, date);
+                        var gallons = dailyResult.Gallons;
 
                         if (gallons <= 0)
                         {
                             continue;
                         }
+
+                        var displayDate = dailyResult.Timestamp ?? date;
 
                         dailyRows.Add((date, gallons));
 
@@ -469,7 +472,7 @@ namespace Well_Readings.Controllers
 
                         rows.Add(new
                         {
-                            date,
+                            date = displayDate,
                             site = selectedSite,
                             name = meter.DisplayName,
                             gallonsPumped = gallons,
@@ -840,6 +843,49 @@ namespace Well_Readings.Controllers
                     reading.Timestamp = groupTime;
                 }
             }
+        }
+
+        private async Task<(decimal Gallons, DateTime? Timestamp)> GetDeltaForDateWithTimestamp(
+            string location,
+            string metricType,
+            DateTime date)
+        {
+            var current = await _context.ScadaHistoryPoints
+                .Where(x =>
+                    x.Location == location &&
+                    x.MetricType == metricType &&
+                    x.Timestamp.Date == date.Date &&
+                    x.Value != null)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+
+            if (current?.Value == null)
+            {
+                return (0, null);
+            }
+
+            var previous = await _context.ScadaHistoryPoints
+                .Where(x =>
+                    x.Location == location &&
+                    x.MetricType == metricType &&
+                    x.Timestamp < current.Timestamp &&
+                    x.Value != null)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+
+            if (previous?.Value == null)
+            {
+                return (0, current.Timestamp);
+            }
+
+            var gallons = current.Value.Value - previous.Value.Value;
+
+            if (gallons < 0)
+            {
+                gallons = 0;
+            }
+
+            return (gallons, current.Timestamp);
         }
 
         private static DateTime RoundToNearestFiveMinutes(DateTime dateTime)
