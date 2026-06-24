@@ -73,6 +73,65 @@
     </div>
 </section>
 
+<section class="report-card report-section" id="siteAnnualReportSection">
+
+    <button type="button" class="report-section-header" onclick="toggleReportSection('siteAnnualReportSection')">
+        <span class="report-section-title">
+            <span>Site Annual Report</span>
+            <span class="report-section-subtitle">Annual or custom range gallons pumped summary by site</span>
+        </span>
+        <span class="report-section-arrow">⌄</span>
+    </button>
+
+    <div class="report-section-content">
+
+        <div class="filter-row">
+            <label>Site</label>
+            <select id="annualSiteSelect">
+                <option>All Sites</option>
+                <option>Reeves Well Site</option>
+                <option>Park Well Site</option>
+                <option>Woods</option>
+                <option>Catawissa</option>
+                <option>New</option>
+                <option>Oakwood</option>
+                <option>Ray</option>
+                <option>Mt. Jefferson</option>
+                <option>Filter Plant</option>
+            </select>
+
+            <label>Beginning Date</label>
+            <input type="date" id="annualStartDate" />
+
+            <label>Ending Date</label>
+            <input type="date" id="annualEndDate" />
+
+            <button type="button" onclick="loadSiteAnnualReport()">Run Annual Report</button>
+        </div>
+
+        <div class="total-box">
+            Selected Range Total Gallons Pumped:
+            <span id="annualTotalGallons">0</span>
+        </div>
+
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Site</th>
+                    <th>Days in Range</th>
+                    <th>Days Pumped</th>
+                    <th>Total Gallons Pumped</th>
+                    <th>Average Gallons / Day</th>
+                    <th>Maximum Gallons / Day</th>
+                </tr>
+            </thead>
+            <tbody id="annualReportBody"></tbody>
+        </table>
+
+    </div>
+
+</section>
+
 <section class="report-card report-section" id="meterReadingReportSection">
     <button type="button" class="report-section-header" onclick="toggleReportSection('meterReadingReportSection')">
         <span class="report-section-title">
@@ -852,6 +911,8 @@
             document.getElementById("pumpEndDate").valueAsDate = today;
             document.getElementById("ncMorStartDate").valueAsDate = firstDay;
             document.getElementById("ncMorEndDate").valueAsDate = today;
+            document.getElementById("annualStartDate").valueAsDate = firstDay;
+            document.getElementById("annualEndDate").valueAsDate = today;
         }
 
         async function loadSiteReport() {
@@ -928,6 +989,58 @@
             });
         }
 
+            async function loadSiteAnnualReport() {
+        const site = document.getElementById("annualSiteSelect").value;
+        const startDate = document.getElementById("annualStartDate").value;
+        const endDate = document.getElementById("annualEndDate").value;
+
+        if (!startDate || !endDate) {
+            alert("Please select a beginning and ending date.");
+            return;
+        }
+
+        const response = await fetch(`/api/scada/site-annual-report?site=${encodeURIComponent(site)}&startDate=${startDate}&endDate=${endDate}`);
+
+        if (!response.ok) {
+            alert("Error loading site annual report.");
+            return;
+        }
+
+        const data = await response.json();
+
+        renderSiteAnnualRows(data.rows || []);
+
+        const totalRow = (data.rows || [])[0];
+        document.getElementById("annualTotalGallons").innerText =
+            totalRow ? formatNumber(totalRow.totalGallonsPumped) : "0";
+    }
+
+    function renderSiteAnnualRows(rows) {
+        const body = document.getElementById("annualReportBody");
+        body.innerHTML = "";
+
+        if (rows.length === 0) {
+            body.innerHTML = `<tr><td colspan="6">No annual report results found.</td></tr>`;
+            document.getElementById("annualTotalGallons").innerText = "0";
+            return;
+        }
+
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${row.site}</td>
+                <td>${row.daysInRange}</td>
+                <td>${row.daysPumped}</td>
+                <td>${formatNumber(row.totalGallonsPumped)}</td>
+                <td>${formatNumber(row.averageGallonsPumpedPerDay)}</td>
+                <td>${formatNumber(row.maxGallonsPumpedPerDay)}</td>
+            `;
+
+            body.appendChild(tr);
+        });
+    }
+        
         async function loadMeterTotalReport() {
             const startDate = document.getElementById("meterStartDate").value;
             const endDate = document.getElementById("meterEndDate").value;

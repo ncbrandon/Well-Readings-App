@@ -517,6 +517,127 @@ namespace Well_Readings.Controllers
             });
         }
 
+        [HttpGet("site-annual-report")]
+        public async Task<IActionResult> GetSiteAnnualReport(string site, DateTime startDate, DateTime endDate)
+        {
+            if (endDate.Date < startDate.Date)
+            {
+                return BadRequest("Ending date cannot be before beginning date.");
+            }
+
+            var reportSites = GetReportSites();
+
+            var selectedSites = site == "All Sites"
+                ? reportSites.Keys.ToList()
+                : new List<string> { site };
+
+            var rangeDays = (endDate.Date - startDate.Date).Days + 1;
+
+            var rows = new List<object>();
+            var allSitesDailyTotals = new Dictionary<DateTime, decimal>();
+
+            foreach (var selectedSite in selectedSites)
+            {
+                if (!reportSites.ContainsKey(selectedSite))
+                {
+                    continue;
+                }
+
+                var config = reportSites[selectedSite];
+
+                // For Filter Plant annual "gallons pumped", use the main Filter Plant meter only.
+                // This prevents double-counting Filter 1 and Filter 2 filtration totals.
+                var metersForAnnual = selectedSite == "Filter Plant"
+                    ? config.Meters
+                        .Where(x => x.Location == "Filter Plant" && x.MetricType == "Meter Reading")
+                        .ToList()
+                    : config.Meters;
+
+                var siteDailyTotals = new Dictionary<DateTime, decimal>();
+
+                for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
+                {
+                    decimal siteGallonsForDay = 0;
+
+                    foreach (var meter in metersForAnnual)
+                    {
+                        var gallons = await GetAnnualReportGallons(meter.Location, meter.MetricType, date);
+                        siteGallonsForDay += gallons;
+                    }
+
+                    siteDailyTotals[date] = siteGallonsForDay;
+
+                    if (!allSitesDailyTotals.ContainsKey(date))
+                    {
+                        allSitesDailyTotals[date] = 0;
+                    }
+
+                    allSitesDailyTotals[date] += siteGallonsForDay;
+                }
+
+                var totalGallons = siteDailyTotals.Sum(x => x.Value);
+                var maxGallons = siteDailyTotals.Any() ? siteDailyTotals.Max(x => x.Value) : 0;
+                var averageGallons = rangeDays > 0 ? totalGallons / rangeDays : 0;
+
+                rows.Add(new
+                {
+                    site = selectedSite,
+                    daysInRange = rangeDays,
+                    daysPumped = siteDailyTotals.Count(x => x.Value > 0),
+                    totalGallonsPumped = totalGallons,
+                    averageGallonsPumpedPerDay = averageGallons,
+                    maxGallonsPumpedPerDay = maxGallons
+                });
+            }
+
+            if (site == "All Sites")
+            {
+                var allTotalGallons = allSitesDailyTotals.Sum(x => x.Value);
+                var allMaxGallons = allSitesDailyTotals.Any() ? allSitesDailyTotals.Max(x => x.Value) : 0;
+                var allAverageGallons = rangeDays > 0 ? allTotalGallons / rangeDays : 0;
+
+                rows.Insert(0, new
+                {
+                    site = "All Sites Total",
+                    daysInRange = rangeDays,
+                    daysPumped = allSitesDailyTotals.Count(x => x.Value > 0),
+                    totalGallonsPumped = allTotalGallons,
+                    averageGallonsPumpedPerDay = allAverageGallons,
+                    maxGallonsPumpedPerDay = allMaxGallons
+                });
+            }
+
+            return Ok(new
+            {
+                startDate = startDate.Date,
+                endDate = endDate.Date,
+                site,
+                rows
+            });
+        }
+
+        private async Task<decimal> GetAnnualReportGallons(string location, string metricType, DateTime date)
+        {
+            if (metricType == "Meter Reading")
+            {
+                return await GetDeltaForDate(location, metricType, date);
+            }
+
+            // For non-cumulative daily totals such as "Total Filtration Flow Yesterday",
+            // use the value recorded on that date instead of subtracting yesterday's value.
+            var value = await _context.ScadaHistoryPoints
+                .Where(x =>
+                    x.Location == location &&
+                    x.MetricType == metricType &&
+                    x.Timestamp.Date == date.Date &&
+                    x.Value != null)
+                .OrderByDescending(x => x.Timestamp)
+                .Select(x => x.Value)
+                .FirstOrDefaultAsync();
+
+            return value ?? 0;
+        }
+
         [HttpGet("meter-reading-total-report")]
         public async Task<IActionResult> GetMeterReadingTotalReport(DateTime startDate, DateTime endDate)
         {
